@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { StatCard } from '../ui/StatCard'
 import { useGamification } from '../../hooks/useGamification'
 
@@ -5,7 +6,15 @@ const CIRCUMFERENCE = 2 * Math.PI * 34
 
 export function WeeklyScore() {
   const { score, grade, gradeColor } = useGamification()
-  const dash = (score / 100) * CIRCUMFERENCE
+  const [animScore, setAnimScore] = useState(0)
+
+  useEffect(() => {
+    // Start at 0, animate to actual score after first paint
+    const t = setTimeout(() => setAnimScore(score), 80)
+    return () => clearTimeout(t)
+  }, [score])
+
+  const dash = (animScore / 100) * CIRCUMFERENCE
 
   return (
     <StatCard title="Weekly Score">

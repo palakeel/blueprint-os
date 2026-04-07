@@ -2,18 +2,24 @@ import { useState } from 'react'
 import { NetWorthEntryForm }  from '../components/forms/NetWorthEntryForm'
 import { NetWorthLineChart }  from '../components/charts/NetWorthLineChart'
 import { useNetWorth }        from '../hooks/useNetWorth'
-import { formatMoneyFull, formatChange, formatPercent, formatDate } from '../lib/formatters'
+import { useMilestones }      from '../hooks/useMilestones'
+import { calcProjections }    from '../lib/calculations'
+import { formatMoneyFull, formatMoney, formatChange, formatPercent, formatDate } from '../lib/formatters'
 
 const RANGES = ['3M', '6M', '1Y', 'ALL']
 
 export function NetWorth() {
   const { history, current, momChange, momPct } = useNetWorth()
+  const { monthlyGrowthRate } = useMilestones()
   const [showForm, setShowForm] = useState(false)
   const [range, setRange]       = useState('ALL')
 
+  const projections = calcProjections(current, monthlyGrowthRate)
+
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Net Worth</h1>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -34,6 +40,7 @@ export function NetWorth() {
         </button>
       </div>
 
+      {/* Chart + Form/Log */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-lg p-5 border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between mb-4">
@@ -105,6 +112,37 @@ export function NetWorth() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Projections Panel */}
+      <div className="rounded-lg p-5 border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Projections</h2>
+          <span className="text-xs" style={{ color: 'var(--text-dim)' }}>
+            Based on <span className="tabular-nums" style={{ color: 'var(--accent-cyan)', fontFamily: "'JetBrains Mono', monospace" }}>
+              +{formatMoney(monthlyGrowthRate)}/mo
+            </span> avg growth
+          </span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {projections.map(p => {
+            const gain = p.value - current
+            return (
+              <div key={p.label} className="rounded-lg p-3 border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
+                <div className="text-xs mb-1" style={{ color: 'var(--text-dim)' }}>{p.label}</div>
+                <div className="tabular-nums font-bold text-sm" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                  {formatMoney(p.value)}
+                </div>
+                <div className="tabular-nums text-xs mt-0.5" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
+                  +{formatMoney(gain)}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-xs mt-3" style={{ color: 'var(--text-dim)' }}>
+          * Assumes constant growth rate. Add more monthly entries for a more accurate projection.
+        </p>
       </div>
     </div>
   )

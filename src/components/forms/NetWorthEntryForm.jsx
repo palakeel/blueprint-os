@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useData } from '../../context/DataContext'
 import { formatMoney } from '../../lib/formatters'
+import { processNetWorthSave } from '../../lib/gamificationActions'
 
 const ASSET_ACCOUNTS = [
   'Blueprint (Robinhood)',
@@ -26,7 +27,7 @@ const fieldStyle = {
 
 export function NetWorthEntryForm({ onSuccess }) {
   const { user } = useAuth()
-  const { netWorthHistory, setNetWorthHistory } = useData()
+  const { netWorthHistory, setNetWorthHistory, gamification, setGamification } = useData()
   const latest = netWorthHistory[0]
 
   const [assets, setAssets] = useState(
@@ -68,6 +69,8 @@ export function NetWorthEntryForm({ onSuccess }) {
         const { data, error: err } = await supabase.from('net_worth_entries').insert(entry).select().single()
         if (err) throw err
         setNetWorthHistory(prev => [data, ...prev.filter(e => !e.id.startsWith('seed'))])
+        processNetWorthSave(user, gamification, { netWorth })
+          .then(result => { if (result?.updated) setGamification(result.updated) })
       } else {
         setNetWorthHistory(prev => [{ ...entry, id: `local-${Date.now()}`, created_at: new Date().toISOString() }, ...prev])
       }

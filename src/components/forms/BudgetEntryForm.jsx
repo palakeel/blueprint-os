@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useData } from '../../context/DataContext'
 import { getWeekStart, formatWeekLabel, formatMoney } from '../../lib/formatters'
+import { processBudgetSave } from '../../lib/gamificationActions'
 
 const fieldStyle = {
   backgroundColor: 'var(--bg-primary)',
@@ -13,7 +14,7 @@ const fieldStyle = {
 
 export function BudgetEntryForm({ onSuccess }) {
   const { user } = useAuth()
-  const { budgetTargets, setBudgetEntries } = useData()
+  const { budgetTargets, setBudgetEntries, gamification, setGamification, latestNetWorth, prevNetWorth } = useData()
 
   const weekStart = getWeekStart()
   const weekEnd   = new Date(weekStart)
@@ -53,6 +54,15 @@ export function BudgetEntryForm({ onSuccess }) {
         const { data, error: err } = await supabase.from('budget_entries').insert(entry).select().single()
         if (err) throw err
         setBudgetEntries(prev => [data, ...prev])
+        // Fire-and-forget gamification update
+        processBudgetSave(user, gamification, {
+          savedEntry:   data,
+          totalSpent,
+          weeklyBudget,
+          netWorthNow:  latestNetWorth?.net_worth,
+          netWorthPrev: prevNetWorth?.net_worth,
+          weekStart,
+        }).then(result => { if (result?.updated) setGamification(result.updated) })
       } else {
         setBudgetEntries(prev => [{ ...entry, id: `local-${Date.now()}`, created_at: new Date().toISOString() }, ...prev])
       }

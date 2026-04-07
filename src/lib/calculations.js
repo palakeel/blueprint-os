@@ -41,6 +41,28 @@ export function calcWeeklyScore({ hasSubmittedBudget, onPace, netWorthUp, dcaCon
   return score
 }
 
+export function calcProjections(current, monthlyGrowthRate) {
+  const project = months => current + monthlyGrowthRate * months
+  return [
+    { label: '1 Year',   months: 12,  value: project(12)  },
+    { label: '3 Years',  months: 36,  value: project(36)  },
+    { label: '5 Years',  months: 60,  value: project(60)  },
+    { label: '10 Years', months: 120, value: project(120) },
+  ]
+}
+
+export function calcSuggestedBudget(budgetEntries) {
+  if (!budgetEntries || budgetEntries.length < 12) return null
+  const recent = budgetEntries.slice(0, 12)
+  const categories = Object.keys(recent[0].categories ?? {})
+  const suggested = {}
+  for (const cat of categories) {
+    const avg = recent.reduce((s, e) => s + (e.categories?.[cat] ?? 0), 0) / recent.length
+    suggested[cat] = Math.round(avg * 1.1)
+  }
+  return suggested
+}
+
 export function getScoreGrade(score) {
   if (score >= 100) return { grade: 'A+', color: 'var(--accent-green)' }
   if (score >= 75)  return { grade: 'A',  color: 'var(--accent-green)' }
