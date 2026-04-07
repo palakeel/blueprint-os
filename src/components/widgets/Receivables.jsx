@@ -4,19 +4,21 @@ import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../lib/formatters'
 import { supabase } from '../../lib/supabase'
-import { CheckCircle, Plus } from 'lucide-react'
+import { CheckCircle, Plus, ChevronDown } from 'lucide-react'
 
 const inputStyle = { backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }
 
 export function Receivables() {
   const { receivables, setReceivables } = useData()
   const { user } = useAuth()
-  const [showForm, setShowForm] = useState(false)
+  const [showForm,    setShowForm]    = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [form, setForm] = useState({ person_name: '', amount: '', description: '' })
   const [saving, setSaving] = useState(false)
 
-  const pending = receivables.filter(r => !r.is_received)
-  const total   = pending.reduce((s, r) => s + r.amount, 0)
+  const pending  = receivables.filter(r => !r.is_received)
+  const received = receivables.filter(r => r.is_received)
+  const total    = pending.reduce((s, r) => s + r.amount, 0)
 
   const markReceived = async (id) => {
     const now = new Date().toISOString()
@@ -111,6 +113,28 @@ export function Receivables() {
             </div>
           ))
         )}
+
+        {received.length > 0 && (
+          <button
+            onClick={() => setShowHistory(h => !h)}
+            className="flex items-center gap-1 text-xs mt-1 w-full justify-center pt-1"
+            style={{ color: 'var(--text-dim)' }}
+          >
+            <ChevronDown size={12} style={{ transform: showHistory ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+            {showHistory ? 'Hide' : `${received.length} received`}
+          </button>
+        )}
+        {showHistory && received.map(r => (
+          <div key={r.id} className="flex items-center justify-between py-1.5 border-b last:border-0 opacity-50" style={{ borderColor: 'var(--border)' }}>
+            <div>
+              <div className="text-sm line-through" style={{ color: 'var(--text-secondary)' }}>{r.person_name}</div>
+              {r.description && <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{r.description}</div>}
+            </div>
+            <span className="tabular-nums text-sm" style={{ color: 'var(--text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>
+              {formatMoney(r.amount)}
+            </span>
+          </div>
+        ))}
       </div>
     </StatCard>
   )

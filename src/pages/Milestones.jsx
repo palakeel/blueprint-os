@@ -20,8 +20,8 @@ export function Milestones() {
         {milestones.map(m => (
           <div
             key={m.id}
-            className="stat-card rounded-lg p-5 border"
-            style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}
+            className={`stat-card rounded-lg p-5 border ${m.is_achieved ? 'milestone-achieved' : ''}`}
+            style={{ backgroundColor: 'var(--bg-secondary)', borderColor: m.is_achieved ? 'var(--accent-amber)' : 'var(--border)' }}
           >
             <div className="flex items-start justify-between mb-3">
               <div>

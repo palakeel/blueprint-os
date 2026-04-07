@@ -5,6 +5,8 @@ import { useNetWorth }        from '../hooks/useNetWorth'
 import { useMilestones }      from '../hooks/useMilestones'
 import { calcProjections }    from '../lib/calculations'
 import { formatMoneyFull, formatMoney, formatChange, formatPercent, formatDate } from '../lib/formatters'
+import { exportNetWorthCSV } from '../lib/csvExport'
+import { Download } from 'lucide-react'
 
 const RANGES = ['3M', '6M', '1Y', 'ALL']
 
@@ -31,13 +33,24 @@ export function NetWorth() {
             </span>
           </div>
         </div>
-        <button
-          onClick={() => setShowForm(f => !f)}
-          className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
-          style={{ backgroundColor: 'var(--accent-green)', color: '#0a0e1a' }}
-        >
-          {showForm ? 'Cancel' : '+ Update'}
-        </button>
+        <div className="flex items-center gap-2">
+          {history.length > 0 && (
+            <button
+              onClick={() => exportNetWorthCSV(history)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-opacity hover:opacity-70"
+              style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
+            >
+              <Download size={12} /> CSV
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(f => !f)}
+            className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
+            style={{ backgroundColor: 'var(--accent-green)', color: '#0a0e1a' }}
+          >
+            {showForm ? 'Cancel' : '+ Update'}
+          </button>
+        </div>
       </div>
 
       {/* Chart + Form/Log */}

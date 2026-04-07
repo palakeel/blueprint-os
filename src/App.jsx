@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { DataProvider }          from './context/DataContext'
+import { ToastProvider }         from './context/ToastContext'
 import { PageWrapper }           from './components/layout/PageWrapper'
 import { Dashboard }  from './pages/Dashboard'
 import { Budget }     from './pages/Budget'
@@ -25,6 +26,7 @@ function AppRoutes() {
   if (loading) return <Loader />
 
   return (
+    <ToastProvider>
     <DataProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -42,6 +44,7 @@ function AppRoutes() {
         } />
       </Routes>
     </DataProvider>
+    </ToastProvider>
   )
 }
 

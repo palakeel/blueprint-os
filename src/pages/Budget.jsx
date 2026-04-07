@@ -4,7 +4,8 @@ import { BudgetBarChart }    from '../components/charts/BudgetBarChart'
 import { useData }           from '../context/DataContext'
 import { calcSuggestedBudget } from '../lib/calculations'
 import { formatMoney, formatDate } from '../lib/formatters'
-import { Lightbulb } from 'lucide-react'
+import { exportBudgetCSV } from '../lib/csvExport'
+import { Lightbulb, Download } from 'lucide-react'
 
 export function Budget() {
   const { budgetEntries, budgetTargets } = useData()
@@ -17,13 +18,24 @@ export function Budget() {
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Weekly Budget</h1>
-        <button
-          onClick={() => setShowForm(f => !f)}
+        <div className="flex items-center gap-2">
+          {budgetEntries.length > 0 && (
+            <button
+              onClick={() => exportBudgetCSV(budgetEntries, budgetTargets)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-opacity hover:opacity-70"
+              style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
+            >
+              <Download size={12} /> CSV
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(f => !f)}
           className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
           style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
         >
           {showForm ? 'Cancel' : '+ New Entry'}
-        </button>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

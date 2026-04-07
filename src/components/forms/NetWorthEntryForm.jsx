@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useData } from '../../context/DataContext'
 import { formatMoney } from '../../lib/formatters'
 import { processNetWorthSave } from '../../lib/gamificationActions'
+import { useToast }            from '../../context/ToastContext'
+import { BADGE_DEFINITIONS }   from '../../lib/gamification'
 
 const ASSET_ACCOUNTS = [
   'Blueprint (Robinhood)',
@@ -28,6 +30,7 @@ const fieldStyle = {
 export function NetWorthEntryForm({ onSuccess }) {
   const { user } = useAuth()
   const { netWorthHistory, setNetWorthHistory, gamification, setGamification } = useData()
+  const { addToast } = useToast()
   const latest = netWorthHistory[0]
 
   const [assets, setAssets] = useState(
@@ -70,7 +73,13 @@ export function NetWorthEntryForm({ onSuccess }) {
         if (err) throw err
         setNetWorthHistory(prev => [data, ...prev.filter(e => !e.id.startsWith('seed'))])
         processNetWorthSave(user, gamification, { netWorth })
-          .then(result => { if (result?.updated) setGamification(result.updated) })
+          .then(result => {
+            if (result?.updated) setGamification(result.updated)
+            for (const badge of result?.newBadges ?? []) {
+              const def = BADGE_DEFINITIONS.find(b => b.id === badge.id)
+              if (def) addToast({ icon: def.icon, title: 'Achievement Unlocked!', message: def.name })
+            }
+          })
       } else {
         setNetWorthHistory(prev => [{ ...entry, id: `local-${Date.now()}`, created_at: new Date().toISOString() }, ...prev])
       }

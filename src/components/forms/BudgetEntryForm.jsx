@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useData } from '../../context/DataContext'
 import { getWeekStart, formatWeekLabel, formatMoney } from '../../lib/formatters'
 import { processBudgetSave } from '../../lib/gamificationActions'
+import { useToast }          from '../../context/ToastContext'
+import { BADGE_DEFINITIONS } from '../../lib/gamification'
 
 const fieldStyle = {
   backgroundColor: 'var(--bg-primary)',
@@ -15,6 +17,7 @@ const fieldStyle = {
 export function BudgetEntryForm({ onSuccess }) {
   const { user } = useAuth()
   const { budgetTargets, setBudgetEntries, gamification, setGamification, latestNetWorth, prevNetWorth } = useData()
+  const { addToast } = useToast()
 
   const weekStart = getWeekStart()
   const weekEnd   = new Date(weekStart)
@@ -62,7 +65,13 @@ export function BudgetEntryForm({ onSuccess }) {
           netWorthNow:  latestNetWorth?.net_worth,
           netWorthPrev: prevNetWorth?.net_worth,
           weekStart,
-        }).then(result => { if (result?.updated) setGamification(result.updated) })
+        }).then(result => {
+          if (result?.updated) setGamification(result.updated)
+          for (const badge of result?.newBadges ?? []) {
+            const def = BADGE_DEFINITIONS.find(b => b.id === badge.id)
+            if (def) addToast({ icon: def.icon, title: 'Achievement Unlocked!', message: def.name })
+          }
+        })
       } else {
         setBudgetEntries(prev => [{ ...entry, id: `local-${Date.now()}`, created_at: new Date().toISOString() }, ...prev])
       }
