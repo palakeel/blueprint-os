@@ -21,6 +21,11 @@ export function formatPercent(value, decimals = 1) {
   return `${sign}${value.toFixed(decimals)}%`
 }
 
+export function localDateString(date = new Date()) {
+  const d = new Date(date)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function formatDate(date) {
   const d = typeof date === 'string' && date.length === 10 ? new Date(date + 'T12:00:00') : new Date(date)
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(d)

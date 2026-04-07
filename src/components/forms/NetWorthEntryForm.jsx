@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useData } from '../../context/DataContext'
-import { formatMoney } from '../../lib/formatters'
+import { formatMoney, localDateString } from '../../lib/formatters'
 import { processNetWorthSave } from '../../lib/gamificationActions'
 import { useToast }            from '../../context/ToastContext'
 import { BADGE_DEFINITIONS }   from '../../lib/gamification'
@@ -48,7 +48,7 @@ export function NetWorthEntryForm({ entry, onSuccess }) {
       return [l, latest?.accounts?.[l] < 0 ? String(Math.abs(latest.accounts[l])) : '']
     }))
   )
-  const [entryDate, setEntryDate] = useState(isEdit ? entry.entry_date : new Date().toISOString().split('T')[0])
+  const [entryDate, setEntryDate] = useState(isEdit ? entry.entry_date : localDateString())
   const [notes, setNotes] = useState(isEdit ? (entry.notes ?? '') : '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
