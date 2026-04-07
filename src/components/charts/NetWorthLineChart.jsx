@@ -26,7 +26,7 @@ export function NetWorthLineChart({ data, range = '1Y' }) {
     .filter(e => new Date(e.entry_date) >= cutoff)
     .reverse()
     .map(e => ({
-      date:  new Date(e.entry_date).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+      date:  new Date(e.entry_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       value: e.net_worth,
     }))
 

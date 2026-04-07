@@ -22,7 +22,8 @@ export function formatPercent(value, decimals = 1) {
 }
 
 export function formatDate(date) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date))
+  const d = typeof date === 'string' && date.length === 10 ? new Date(date + 'T12:00:00') : new Date(date)
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(d)
 }
 
 export function formatRelativeDate(date) {
