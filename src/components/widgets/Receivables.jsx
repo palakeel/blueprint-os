@@ -4,7 +4,7 @@ import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney } from '../../lib/formatters'
 import { supabase } from '../../lib/supabase'
-import { CheckCircle, Plus, ChevronDown } from 'lucide-react'
+import { CheckCircle, Plus, ChevronDown, Pencil, Trash2 } from 'lucide-react'
 
 const inputStyle = { backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }
 
@@ -14,6 +14,7 @@ export function Receivables() {
   const [showForm,    setShowForm]    = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [form, setForm] = useState({ person_name: '', amount: '', description: '' })
+  const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const pending  = receivables.filter(r => !r.is_received)
@@ -31,22 +32,45 @@ export function Receivables() {
   const handleAdd = async (e) => {
     e.preventDefault()
     setSaving(true)
-    const rec = {
-      person_name:  form.person_name,
-      amount:       parseFloat(form.amount),
-      description:  form.description,
-      created_date: new Date().toISOString(),
-      is_received:  false,
-    }
-    const tempId = `local-${Date.now()}`
-    setReceivables(prev => [{ ...rec, id: tempId }, ...prev])
-    if (user) {
-      const { data } = await supabase.from('receivables').insert({ ...rec, user_id: user.id }).select().single()
-      if (data) setReceivables(prev => prev.map(r => r.id === tempId ? data : r))
+    if (editingId) {
+      const updates = { person_name: form.person_name, amount: parseFloat(form.amount), description: form.description }
+      setReceivables(prev => prev.map(r => r.id === editingId ? { ...r, ...updates } : r))
+      if (user && !editingId.startsWith('local') && !editingId.startsWith('seed')) {
+        await supabase.from('receivables').update(updates).eq('id', editingId)
+      }
+      setEditingId(null)
+    } else {
+      const rec = {
+        person_name:  form.person_name,
+        amount:       parseFloat(form.amount),
+        description:  form.description,
+        created_date: new Date().toISOString(),
+        is_received:  false,
+      }
+      const tempId = `local-${Date.now()}`
+      setReceivables(prev => [{ ...rec, id: tempId }, ...prev])
+      if (user) {
+        const { data } = await supabase.from('receivables').insert({ ...rec, user_id: user.id }).select().single()
+        if (data) setReceivables(prev => prev.map(r => r.id === tempId ? data : r))
+      }
     }
     setForm({ person_name: '', amount: '', description: '' })
     setShowForm(false)
     setSaving(false)
+  }
+
+  const handleDelete = async (r) => {
+    if (!confirm(`Delete receivable for ${r.person_name}?`)) return
+    setReceivables(prev => prev.filter(x => x.id !== r.id))
+    if (user && !r.id.startsWith('local') && !r.id.startsWith('seed')) {
+      await supabase.from('receivables').delete().eq('id', r.id)
+    }
+  }
+
+  const startEdit = (r) => {
+    setForm({ person_name: r.person_name, amount: String(r.amount), description: r.description ?? '' })
+    setEditingId(r.id)
+    setShowForm(true)
   }
 
   return (
@@ -57,7 +81,7 @@ export function Receivables() {
             {formatMoney(total)} pending
           </span>
           <button
-            onClick={() => setShowForm(f => !f)}
+            onClick={() => { setShowForm(f => !f); setEditingId(null); setForm({ person_name: '', amount: '', description: '' }) }}
             className="flex items-center gap-1 text-xs px-2 py-1 rounded"
             style={{ color: 'var(--accent-cyan)', backgroundColor: 'var(--bg-tertiary)' }}
           >
@@ -67,6 +91,7 @@ export function Receivables() {
 
         {showForm && (
           <form onSubmit={handleAdd} className="space-y-2 p-3 rounded border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
+            {editingId && <div className="text-[10px] px-1.5 py-0.5 rounded inline-block" style={{ backgroundColor: 'var(--accent-amber)', color: '#0a0e1a' }}>EDITING</div>}
             <input value={form.person_name} onChange={e => setForm(f => ({ ...f, person_name: e.target.value }))}
               placeholder="Person" required
               className="w-full text-xs px-2 py-1.5 rounded border outline-none"
@@ -82,7 +107,7 @@ export function Receivables() {
             <div className="flex gap-2">
               <button type="submit" disabled={saving} className="flex-1 text-xs py-1 rounded font-medium"
                 style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}>
-                {saving ? '...' : 'Add'}
+                {saving ? '...' : editingId ? 'Update' : 'Add'}
               </button>
               <button type="button" onClick={() => setShowForm(false)} className="flex-1 text-xs py-1 rounded"
                 style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
@@ -96,15 +121,23 @@ export function Receivables() {
           <p className="text-xs text-center py-3" style={{ color: 'var(--text-dim)' }}>No pending receivables</p>
         ) : (
           pending.map(r => (
-            <div key={r.id} className="flex items-center justify-between py-1.5 border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
+            <div key={r.id} className="flex items-center justify-between py-1.5 border-b last:border-0 group" style={{ borderColor: 'var(--border)' }}>
               <div>
                 <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{r.person_name}</div>
                 {r.description && <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{r.description}</div>}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span className="tabular-nums text-sm font-semibold" style={{ color: 'var(--accent-amber)', fontFamily: "'JetBrains Mono', monospace" }}>
                   {formatMoney(r.amount)}
                 </span>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => startEdit(r)} className="p-1 rounded hover:opacity-70" style={{ color: 'var(--accent-cyan)' }}>
+                    <Pencil size={11} />
+                  </button>
+                  <button onClick={() => handleDelete(r)} className="p-1 rounded hover:opacity-70" style={{ color: 'var(--accent-red)' }}>
+                    <Trash2 size={11} />
+                  </button>
+                </div>
                 <button onClick={() => markReceived(r.id)} className="hover:opacity-70 transition-opacity"
                   style={{ color: 'var(--accent-green)' }}>
                   <CheckCircle size={16} />

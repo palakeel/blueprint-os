@@ -7,6 +7,7 @@ import { processNetWorthSave } from '../../lib/gamificationActions'
 import { useToast }            from '../../context/ToastContext'
 import { BADGE_DEFINITIONS }   from '../../lib/gamification'
 
+
 const ASSET_ACCOUNTS = [
   'Blueprint (Robinhood)',
   'Roth IRA',
@@ -27,20 +28,28 @@ const fieldStyle = {
   fontFamily: "'JetBrains Mono', monospace",
 }
 
-export function NetWorthEntryForm({ onSuccess }) {
+export function NetWorthEntryForm({ entry, onSuccess }) {
   const { user } = useAuth()
   const { netWorthHistory, setNetWorthHistory, gamification, setGamification } = useData()
   const { addToast } = useToast()
   const latest = netWorthHistory[0]
 
+  const isEdit = !!entry
+
   const [assets, setAssets] = useState(
-    Object.fromEntries(ASSET_ACCOUNTS.map(a => [a, latest?.accounts?.[a] > 0 ? String(latest.accounts[a]) : '']))
+    Object.fromEntries(ASSET_ACCOUNTS.map(a => {
+      if (isEdit) return [a, entry.accounts?.[a] > 0 ? String(entry.accounts[a]) : '']
+      return [a, latest?.accounts?.[a] > 0 ? String(latest.accounts[a]) : '']
+    }))
   )
   const [liabilities, setLiabilities] = useState(
-    Object.fromEntries(LIABILITY_ACCOUNTS.map(l => [l, latest?.accounts?.[l] < 0 ? String(Math.abs(latest.accounts[l])) : '']))
+    Object.fromEntries(LIABILITY_ACCOUNTS.map(l => {
+      if (isEdit) return [l, entry.accounts?.[l] < 0 ? String(Math.abs(entry.accounts[l])) : '']
+      return [l, latest?.accounts?.[l] < 0 ? String(Math.abs(latest.accounts[l])) : '']
+    }))
   )
-  const [entryDate, setEntryDate] = useState(new Date().toISOString().split('T')[0])
-  const [notes, setNotes] = useState('')
+  const [entryDate, setEntryDate] = useState(isEdit ? entry.entry_date : new Date().toISOString().split('T')[0])
+  const [notes, setNotes] = useState(isEdit ? (entry.notes ?? '') : '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -57,7 +66,7 @@ export function NetWorthEntryForm({ onSuccess }) {
     for (const a of ASSET_ACCOUNTS)      accountMap[a] = parseFloat(assets[a]) || 0
     for (const l of LIABILITY_ACCOUNTS)  accountMap[l] = -(parseFloat(liabilities[l]) || 0)
 
-    const entry = {
+    const dbEntry = {
       user_id:            user?.id,
       entry_date:         entryDate,
       accounts:           accountMap,
@@ -69,19 +78,27 @@ export function NetWorthEntryForm({ onSuccess }) {
 
     try {
       if (user) {
-        const { data, error: err } = await supabase.from('net_worth_entries').insert(entry).select().single()
-        if (err) throw err
-        setNetWorthHistory(prev => [data, ...prev.filter(e => !e.id.startsWith('seed'))])
-        processNetWorthSave(user, gamification, { netWorth })
-          .then(result => {
-            if (result?.updated) setGamification(result.updated)
-            for (const badge of result?.newBadges ?? []) {
-              const def = BADGE_DEFINITIONS.find(b => b.id === badge.id)
-              if (def) addToast({ icon: def.icon, title: 'Achievement Unlocked!', message: def.name })
-            }
-          })
+        if (isEdit) {
+          const { data, error: err } = await supabase
+            .from('net_worth_entries').update(dbEntry).eq('id', entry.id).select().single()
+          if (err) throw err
+          setNetWorthHistory(prev => prev.map(e => e.id === entry.id ? data : e))
+        } else {
+          const { data, error: err } = await supabase.from('net_worth_entries').insert(dbEntry).select().single()
+          if (err) throw err
+          setNetWorthHistory(prev => [data, ...prev.filter(e => !e.id.startsWith('seed'))])
+          processNetWorthSave(user, gamification, { netWorth })
+            .then(result => {
+              if (result?.updated) setGamification(result.updated)
+              for (const badge of result?.newBadges ?? []) {
+                const def = BADGE_DEFINITIONS.find(b => b.id === badge.id)
+                if (def) addToast({ icon: def.icon, title: 'Achievement Unlocked!', message: def.name })
+              }
+            })
+        }
       } else {
-        setNetWorthHistory(prev => [{ ...entry, id: `local-${Date.now()}`, created_at: new Date().toISOString() }, ...prev])
+        const local = { ...dbEntry, id: isEdit ? entry.id : `local-${Date.now()}`, created_at: new Date().toISOString() }
+        setNetWorthHistory(prev => isEdit ? prev.map(e => e.id === entry.id ? local : e) : [local, ...prev.filter(e => !e.id.startsWith('seed'))])
       }
       onSuccess?.()
     } catch (err) {
@@ -95,6 +112,7 @@ export function NetWorthEntryForm({ onSuccess }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex items-center gap-3">
         <label className="text-xs flex-shrink-0" style={{ color: 'var(--text-secondary)' }}>Date</label>
+        {isEdit && <span className="ml-auto px-1.5 py-0.5 rounded text-[10px]" style={{ backgroundColor: 'var(--accent-amber)', color: '#0a0e1a' }}>EDITING</span>}
         <input
           type="date"
           value={entryDate}
@@ -194,7 +212,7 @@ export function NetWorthEntryForm({ onSuccess }) {
         className="w-full py-2.5 rounded font-semibold text-sm transition-opacity"
         style={{ backgroundColor: 'var(--accent-green)', color: '#0a0e1a', opacity: saving ? 0.7 : 1 }}
       >
-        {saving ? 'Saving...' : 'Save Net Worth Entry'}
+        {saving ? 'Saving...' : isEdit ? 'Update Entry' : 'Save Net Worth Entry'}
       </button>
     </form>
   )

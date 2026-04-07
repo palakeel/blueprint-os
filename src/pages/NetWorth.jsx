@@ -6,17 +6,36 @@ import { useMilestones }      from '../hooks/useMilestones'
 import { calcProjections }    from '../lib/calculations'
 import { formatMoneyFull, formatMoney, formatChange, formatPercent, formatDate } from '../lib/formatters'
 import { exportNetWorthCSV } from '../lib/csvExport'
-import { Download } from 'lucide-react'
+import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
+import { Download, Pencil, Trash2 } from 'lucide-react'
 
 const RANGES = ['3M', '6M', '1Y', 'ALL']
 
 export function NetWorth() {
   const { history, current, momChange, momPct } = useNetWorth()
   const { monthlyGrowthRate } = useMilestones()
+  const { setNetWorthHistory } = useData()
+  const { user } = useAuth()
   const [showForm, setShowForm] = useState(false)
+  const [editingEntry, setEditingEntry] = useState(null)
   const [range, setRange]       = useState('ALL')
 
   const projections = calcProjections(current, monthlyGrowthRate)
+
+  const handleDelete = async (entry) => {
+    if (!confirm('Delete this net worth entry?')) return
+    if (user) {
+      await supabase.from('net_worth_entries').delete().eq('id', entry.id)
+    }
+    setNetWorthHistory(prev => prev.filter(e => e.id !== entry.id))
+  }
+
+  const startEdit = (entry) => {
+    setEditingEntry(entry)
+    setShowForm(false)
+  }
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
@@ -44,11 +63,11 @@ export function NetWorth() {
             </button>
           )}
           <button
-            onClick={() => setShowForm(f => !f)}
+            onClick={() => { setShowForm(f => !f); setEditingEntry(null) }}
             className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
             style={{ backgroundColor: 'var(--accent-green)', color: '#0a0e1a' }}
           >
-            {showForm ? 'Cancel' : '+ Update'}
+            {showForm || editingEntry ? 'Cancel' : '+ Update'}
           </button>
         </div>
       </div>
@@ -82,11 +101,16 @@ export function NetWorth() {
         </div>
 
         <div className="rounded-lg p-5 border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-          {showForm ? (
+          {showForm || editingEntry ? (
             <>
-              <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>New Entry</h2>
+              <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+                {editingEntry ? 'Edit Entry' : 'New Entry'}
+              </h2>
               <div className="max-h-[70vh] overflow-y-auto pr-1">
-                <NetWorthEntryForm onSuccess={() => setShowForm(false)} />
+                <NetWorthEntryForm
+                  entry={editingEntry ?? undefined}
+                  onSuccess={() => { setShowForm(false); setEditingEntry(null) }}
+                />
               </div>
             </>
           ) : (
@@ -99,6 +123,7 @@ export function NetWorth() {
                       <th className="text-left pb-2 font-medium">Date</th>
                       <th className="text-right pb-2 font-medium">Net Worth</th>
                       <th className="text-right pb-2 font-medium">Change</th>
+                      <th className="pb-2"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -106,7 +131,7 @@ export function NetWorth() {
                       const prev   = history[i + 1]
                       const change = prev ? entry.net_worth - prev.net_worth : null
                       return (
-                        <tr key={entry.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                        <tr key={entry.id} className="border-t group" style={{ borderColor: 'var(--border)' }}>
                           <td className="py-2" style={{ color: 'var(--text-secondary)' }}>
                             {formatDate(entry.entry_date)}
                           </td>
@@ -115,6 +140,16 @@ export function NetWorth() {
                           </td>
                           <td className="py-2 text-right tabular-nums" style={{ color: change == null ? 'var(--text-dim)' : change >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontFamily: "'JetBrains Mono', monospace" }}>
                             {change != null ? formatChange(change) : '—'}
+                          </td>
+                          <td className="py-2 text-right">
+                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => startEdit(entry)} className="p-1 rounded hover:opacity-70" style={{ color: 'var(--accent-cyan)' }}>
+                                <Pencil size={11} />
+                              </button>
+                              <button onClick={() => handleDelete(entry)} className="p-1 rounded hover:opacity-70" style={{ color: 'var(--accent-red)' }}>
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )

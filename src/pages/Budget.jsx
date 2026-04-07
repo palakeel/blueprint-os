@@ -5,12 +5,29 @@ import { useData }           from '../context/DataContext'
 import { calcSuggestedBudget } from '../lib/calculations'
 import { formatMoney, formatDate } from '../lib/formatters'
 import { exportBudgetCSV } from '../lib/csvExport'
-import { Lightbulb, Download } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
+import { Lightbulb, Download, Pencil, Trash2 } from 'lucide-react'
 
 export function Budget() {
-  const { budgetEntries, budgetTargets } = useData()
+  const { budgetEntries, budgetTargets, setBudgetEntries } = useData()
+  const { user } = useAuth()
   const [showForm, setShowForm] = useState(false)
+  const [editingEntry, setEditingEntry] = useState(null)
   const weeklyBudget = Object.values(budgetTargets).reduce((a, b) => a + b, 0)
+
+  const handleDelete = async (entry) => {
+    if (!confirm('Delete this budget entry?')) return
+    if (user) {
+      await supabase.from('budget_entries').delete().eq('id', entry.id)
+    }
+    setBudgetEntries(prev => prev.filter(e => e.id !== entry.id))
+  }
+
+  const startEdit = (entry) => {
+    setEditingEntry(entry)
+    setShowForm(false)
+  }
 
   const suggestions = calcSuggestedBudget(budgetEntries)
 
@@ -29,21 +46,26 @@ export function Budget() {
             </button>
           )}
           <button
-            onClick={() => setShowForm(f => !f)}
-          className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
-          style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
-        >
-          {showForm ? 'Cancel' : '+ New Entry'}
+            onClick={() => { setShowForm(f => !f); setEditingEntry(null) }}
+            className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
+            style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+          >
+            {showForm || editingEntry ? 'Cancel' : '+ New Entry'}
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-lg p-5 border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-          {showForm ? (
+          {showForm || editingEntry ? (
             <>
-              <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>New Entry</h2>
-              <BudgetEntryForm onSuccess={() => setShowForm(false)} />
+              <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+                {editingEntry ? 'Edit Entry' : 'New Entry'}
+              </h2>
+              <BudgetEntryForm
+                entry={editingEntry ?? undefined}
+                onSuccess={() => { setShowForm(false); setEditingEntry(null) }}
+              />
             </>
           ) : (
             <>
@@ -74,13 +96,14 @@ export function Budget() {
                     <th className="text-right pb-2 font-medium">Spent</th>
                     <th className="text-right pb-2 font-medium">Budget</th>
                     <th className="text-right pb-2 font-medium">Score</th>
+                    <th className="pb-2"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {budgetEntries.map(entry => {
                     const over = entry.total_spent > weeklyBudget
                     return (
-                      <tr key={entry.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                      <tr key={entry.id} className="border-t group" style={{ borderColor: 'var(--border)' }}>
                         <td className="py-2" style={{ color: 'var(--text-secondary)' }}>
                           {formatDate(entry.week_start)}
                         </td>
@@ -92,6 +115,16 @@ export function Budget() {
                         </td>
                         <td className="py-2 text-right" style={{ color: entry.weekly_score != null ? 'var(--accent-amber)' : 'var(--text-dim)' }}>
                           {entry.weekly_score ?? '—'}
+                        </td>
+                        <td className="py-2 text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => startEdit(entry)} className="p-1 rounded hover:opacity-70" style={{ color: 'var(--accent-cyan)' }}>
+                              <Pencil size={11} />
+                            </button>
+                            <button onClick={() => handleDelete(entry)} className="p-1 rounded hover:opacity-70" style={{ color: 'var(--accent-red)' }}>
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
