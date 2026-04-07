@@ -11,14 +11,14 @@ const ASSET_ACCOUNTS = [
   'Blueprint (Robinhood)',
   'Roth IRA',
   'Trading Account',
-  'RH Bank Savings',
+  'Robinhood Banking',
   'CEFCU Checking',
   'CEFCU Savings',
   'Crypto (Coinbase)',
   'Hyperliquid',
 ]
 
-const LIABILITY_ACCOUNTS = ['AMEX balance']
+const LIABILITY_ACCOUNTS = ['AMEX', 'Robinhood Gold', 'Coinbase One Card']
 
 const fieldStyle = {
   backgroundColor: 'var(--bg-primary)',
