@@ -107,6 +107,23 @@ create policy "own_data" on portfolio_positions for all using (auth.uid() = user
 create policy "own_data" on dca_confirmations   for all using (auth.uid() = user_id);
 create policy "own_data" on gamification        for all using (auth.uid() = user_id);
 
+-- Trade history
+create table if not exists trade_history (
+  id          uuid primary key default uuid_generate_v4(),
+  user_id     uuid references auth.users(id) on delete cascade not null,
+  ticker      text not null,
+  trade_type  text not null, -- 'DCA', 'Limit Fill', 'Manual Buy'
+  shares      numeric(10, 4) not null,
+  price       numeric(10, 2) not null,
+  total_cost  numeric(12, 2) not null,
+  trade_date  date not null,
+  notes       text,
+  created_at  timestamptz default now()
+);
+
+alter table trade_history enable row level security;
+create policy "own_data" on trade_history for all using (auth.uid() = user_id);
+
 -- Schwab OAuth tokens (singleton row, accessed only via service role)
 create table if not exists schwab_tokens (
   id            text primary key default 'singleton',
