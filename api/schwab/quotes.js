@@ -83,11 +83,11 @@ export default async function handler(req, res) {
   for (const [symbol, data] of Object.entries(raw)) {
     const q = data.quote ?? {}
 
-    // Always use last regular session close (4 PM ET)
-    const price         = q.closePrice ?? q.regularMarketLastPrice ?? q.lastPrice ?? q.mark ?? 0
-    const prevClose     = q.closePrice ?? price
-    const change        = q.netChange ?? 0
-    const changePercent = q.netPercentChangeInDouble ?? 0
+    // mark = Schwab's official end-of-day price (confirmed correct)
+    // markChange/markPercentChange are the corresponding change fields
+    const price         = q.mark ?? q.lastPrice ?? 0
+    const change        = q.markChange ?? q.netChange ?? 0
+    const changePercent = q.markPercentChange ?? q.netPercentChangeInDouble ?? 0
 
     result[symbol] = {
       price,
