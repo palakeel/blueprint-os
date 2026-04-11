@@ -2,6 +2,7 @@ import { StatCard } from '../ui/StatCard'
 import { AssetDonutChart, DONUT_COLORS } from '../charts/AssetDonutChart'
 import { useData } from '../../context/DataContext'
 import { formatMoney } from '../../lib/formatters'
+import { Private } from '../ui/Private'
 
 export function AssetBreakdown() {
   const { latestNetWorth } = useData()
@@ -29,7 +30,7 @@ export function AssetBreakdown() {
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <span className="tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {formatMoney(item.value)}
+                  <Private>{formatMoney(item.value)}</Private>
                 </span>
                 <span style={{ color: 'var(--text-dim)' }}>
                   {total > 0 ? `${((item.value / total) * 100).toFixed(0)}%` : ''}

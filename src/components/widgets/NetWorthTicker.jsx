@@ -3,6 +3,7 @@ import { useNetWorth } from '../../hooks/useNetWorth'
 import { formatMoneyFull, formatChange, formatPercent } from '../../lib/formatters'
 import { useData } from '../../context/DataContext'
 import { formatDate } from '../../lib/formatters'
+import { Private } from '../ui/Private'
 
 export function NetWorthTicker() {
   const { current, momChange, momPct, dailyVelocity } = useNetWorth()
@@ -16,7 +17,7 @@ export function NetWorthTicker() {
           className="font-bold leading-none tabular-nums"
           style={{ fontSize: '2.2rem', color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}
         >
-          {formatMoneyFull(current)}
+          <Private>{formatMoneyFull(current)}</Private>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
@@ -24,10 +25,10 @@ export function NetWorthTicker() {
             className="text-sm tabular-nums"
             style={{ color: isPos ? 'var(--accent-green)' : 'var(--accent-red)', fontFamily: "'JetBrains Mono', monospace" }}
           >
-            {formatChange(momChange)} MoM
+            <Private>{formatChange(momChange)} MoM</Private>
           </span>
           <span className="text-xs" style={{ color: 'var(--text-dim)' }}>
-            ({formatPercent(momPct)})
+            (<Private>{formatPercent(momPct)}</Private>)
           </span>
         </div>
 
@@ -37,7 +38,7 @@ export function NetWorthTicker() {
             className="tabular-nums"
             style={{ color: dailyVelocity >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontFamily: "'JetBrains Mono', monospace" }}
           >
-            {formatChange(dailyVelocity)}/day
+            <Private>{formatChange(dailyVelocity)}/day</Private>
           </span>
         </div>
 

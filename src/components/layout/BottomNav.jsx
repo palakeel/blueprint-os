@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Wallet, TrendingUp, Briefcase, Target, Settings } from 'lucide-react'
+import { LayoutDashboard, Wallet, TrendingUp, Briefcase, Target, Settings, Eye, EyeOff } from 'lucide-react'
+import { usePrivacy } from '../../context/PrivacyContext'
 
 const ITEMS = [
   { path: '/',           Icon: LayoutDashboard, label: 'Home'      },
@@ -12,6 +13,7 @@ const ITEMS = [
 
 export function BottomNav() {
   const { pathname } = useLocation()
+  const { privacyMode, toggle } = usePrivacy()
 
   return (
     <nav
@@ -32,6 +34,14 @@ export function BottomNav() {
           </Link>
         )
       })}
+      <button
+        onClick={toggle}
+        className="flex-1 flex flex-col items-center py-2 gap-0.5"
+        style={{ color: privacyMode ? 'var(--accent-amber)' : 'var(--text-dim)' }}
+      >
+        {privacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
+        <span className="text-[9px]">{privacyMode ? 'Show' : 'Hide'}</span>
+      </button>
     </nav>
   )
 }

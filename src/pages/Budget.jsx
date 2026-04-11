@@ -7,6 +7,7 @@ import { formatMoney, formatDate } from '../lib/formatters'
 import { exportBudgetCSV } from '../lib/csvExport'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { Private } from '../components/ui/Private'
 import { Lightbulb, Download, Pencil, Trash2 } from 'lucide-react'
 
 export function Budget() {
@@ -108,10 +109,10 @@ export function Budget() {
                           {formatDate(entry.week_start)}
                         </td>
                         <td className="py-2 text-right tabular-nums" style={{ color: over ? 'var(--accent-red)' : 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
-                          {formatMoney(entry.total_spent)}
+                          <Private>{formatMoney(entry.total_spent)}</Private>
                         </td>
                         <td className="py-2 text-right tabular-nums" style={{ color: 'var(--text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>
-                          {formatMoney(weeklyBudget)}
+                          <Private>{formatMoney(weeklyBudget)}</Private>
                         </td>
                         <td className="py-2 text-right" style={{ color: entry.weekly_score != null ? 'var(--accent-amber)' : 'var(--text-dim)' }}>
                           {entry.weekly_score ?? '—'}

@@ -6,6 +6,7 @@ import { LogTradeForm }        from '../components/forms/LogTradeForm'
 import { EditPositionForm }    from '../components/forms/EditPositionForm'
 import { supabase }            from '../lib/supabase'
 import { formatMoney }         from '../lib/formatters'
+import { Private }             from '../components/ui/Private'
 import { CheckCircle, Clock, RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus } from 'lucide-react'
 
 function getDCAPeriod() {
@@ -104,14 +105,14 @@ export function Portfolio() {
           </div>
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             <span className="tabular-nums text-sm" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
-              {formatMoney(priceStatus === 'connected' ? totalMarketValue : totalCost)}
+              <Private>{formatMoney(priceStatus === 'connected' ? totalMarketValue : totalCost)}</Private>
               <span className="text-xs ml-1" style={{ color: 'var(--text-dim)' }}>
                 {priceStatus === 'connected' ? 'market value' : 'cost basis'}
               </span>
             </span>
             {priceStatus === 'connected' && (
               <span className="tabular-nums text-sm" style={{ color: totalMarketValue - totalCost >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontFamily: "'JetBrains Mono', monospace" }}>
-                {totalMarketValue - totalCost >= 0 ? '+' : ''}{formatMoney(totalMarketValue - totalCost)} P&L
+                <Private>{totalMarketValue - totalCost >= 0 ? '+' : ''}{formatMoney(totalMarketValue - totalCost)} P&L</Private>
               </span>
             )}
           </div>
@@ -202,17 +203,17 @@ export function Portfolio() {
                         </td>
                       )}
                       <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                        {formatMoney(mktValue)}
+                        <Private>{formatMoney(mktValue)}</Private>
                       </td>
                       {priceStatus === 'connected' && (
                         <td className="px-4 py-3 text-right tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           {pnl != null ? (
                             <>
                               <div style={{ color: pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                                {pnl >= 0 ? '+' : ''}{formatMoney(pnl)}
+                                <Private>{pnl >= 0 ? '+' : ''}{formatMoney(pnl)}</Private>
                               </div>
                               <div className="text-xs" style={{ color: pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                                {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%
+                                <Private>{pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%</Private>
                               </div>
                             </>
                           ) : '—'}

@@ -3,6 +3,7 @@ import { StatCard } from '../ui/StatCard'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatMoney, localDateString } from '../../lib/formatters'
+import { Private } from '../ui/Private'
 import { supabase } from '../../lib/supabase'
 import { CheckCircle, Plus, ChevronDown, Pencil, Trash2 } from 'lucide-react'
 
@@ -88,7 +89,7 @@ export function Receivables() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm tabular-nums font-semibold" style={{ color: 'var(--accent-amber)', fontFamily: "'JetBrains Mono', monospace" }}>
-            {formatMoney(total)} pending
+            <Private>{formatMoney(total)} pending</Private>
           </span>
           <button
             onClick={() => { setShowForm(f => !f); setEditingId(null); setForm({ person_name: '', amount: '', description: '' }) }}
@@ -138,7 +139,7 @@ export function Receivables() {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="tabular-nums text-sm font-semibold" style={{ color: 'var(--accent-amber)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {formatMoney(r.amount)}
+                  <Private>{formatMoney(r.amount)}</Private>
                 </span>
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => startEdit(r)} className="p-1 rounded hover:opacity-70" style={{ color: 'var(--accent-cyan)' }}>
@@ -174,7 +175,7 @@ export function Receivables() {
               {r.description && <div className="text-xs" style={{ color: 'var(--text-dim)' }}>{r.description}</div>}
             </div>
             <span className="tabular-nums text-sm" style={{ color: 'var(--text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>
-              {formatMoney(r.amount)}
+              <Private>{formatMoney(r.amount)}</Private>
             </span>
           </div>
         ))}

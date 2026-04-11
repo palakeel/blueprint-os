@@ -2,7 +2,9 @@ import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useData } from '../../context/DataContext'
+import { usePrivacy } from '../../context/PrivacyContext'
 import { formatRelativeDate } from '../../lib/formatters'
+import { Eye, EyeOff } from 'lucide-react'
 
 const NAV_LINKS = [
   { path: '/',           label: 'Command' },
@@ -17,6 +19,7 @@ export function TopNav() {
   const location = useLocation()
   const { user, signOut } = useAuth()
   const { lastUpdated } = useData()
+  const { privacyMode, toggle } = usePrivacy()
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {
@@ -70,6 +73,14 @@ export function TopNav() {
         >
           {timeStr}
         </span>
+        <button
+          onClick={toggle}
+          className="p-1.5 rounded transition-opacity hover:opacity-70"
+          style={{ color: privacyMode ? 'var(--accent-amber)' : 'var(--text-dim)' }}
+          title={privacyMode ? 'Show data' : 'Hide data'}
+        >
+          {privacyMode ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
         {user && (
           <button
             onClick={signOut}

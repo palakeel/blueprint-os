@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { DataProvider }          from './context/DataContext'
 import { ToastProvider }         from './context/ToastContext'
+import { PrivacyProvider }       from './context/PrivacyContext'
 import { PageWrapper }           from './components/layout/PageWrapper'
 import { Dashboard }  from './pages/Dashboard'
 import { Budget }     from './pages/Budget'
@@ -52,7 +53,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <PrivacyProvider>
+          <AppRoutes />
+        </PrivacyProvider>
       </AuthProvider>
     </BrowserRouter>
   )

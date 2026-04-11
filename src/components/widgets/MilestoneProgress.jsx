@@ -2,6 +2,7 @@ import { StatCard } from '../ui/StatCard'
 import { ProgressBar } from '../ui/ProgressBar'
 import { useMilestones } from '../../hooks/useMilestones'
 import { formatMoney } from '../../lib/formatters'
+import { Private } from '../ui/Private'
 
 export function MilestoneProgress() {
   const { milestones } = useMilestones()
@@ -17,7 +18,7 @@ export function MilestoneProgress() {
               </span>
               <div className="flex items-center gap-2 text-xs">
                 <span className="tabular-nums" style={{ color: 'var(--text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {formatMoney(m.target_amount)}
+                  <Private>{formatMoney(m.target_amount)}</Private>
                 </span>
                 {!m.is_achieved && (
                   <span style={{ color: 'var(--accent-cyan)' }}>{m.eta}</span>

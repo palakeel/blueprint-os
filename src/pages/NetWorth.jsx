@@ -9,6 +9,7 @@ import { exportNetWorthCSV } from '../lib/csvExport'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { Private } from '../components/ui/Private'
 import { Download, Pencil, Trash2 } from 'lucide-react'
 
 const RANGES = ['3M', '6M', '1Y', 'ALL']
@@ -45,10 +46,10 @@ export function NetWorth() {
           <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Net Worth</h1>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <span className="tabular-nums text-2xl font-bold" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-              {formatMoneyFull(current)}
+              <Private>{formatMoneyFull(current)}</Private>
             </span>
             <span className="tabular-nums text-sm" style={{ color: momChange >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontFamily: "'JetBrains Mono', monospace" }}>
-              {formatChange(momChange)} ({formatPercent(momPct)})
+              <Private>{formatChange(momChange)} ({formatPercent(momPct)})</Private>
             </span>
           </div>
         </div>
@@ -136,10 +137,10 @@ export function NetWorth() {
                             {formatDate(entry.entry_date)}
                           </td>
                           <td className="py-2 text-right tabular-nums font-semibold" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                            {formatMoneyFull(entry.net_worth)}
+                            <Private>{formatMoneyFull(entry.net_worth)}</Private>
                           </td>
                           <td className="py-2 text-right tabular-nums" style={{ color: change == null ? 'var(--text-dim)' : change >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontFamily: "'JetBrains Mono', monospace" }}>
-                            {change != null ? formatChange(change) : '—'}
+                            <Private>{change != null ? formatChange(change) : '—'}</Private>
                           </td>
                           <td className="py-2 text-right">
                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -179,10 +180,10 @@ export function NetWorth() {
               <div key={p.label} className="rounded-lg p-3 border" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
                 <div className="text-xs mb-1" style={{ color: 'var(--text-dim)' }}>{p.label}</div>
                 <div className="tabular-nums font-bold text-sm" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {formatMoney(p.value)}
+                  <Private>{formatMoney(p.value)}</Private>
                 </div>
                 <div className="tabular-nums text-xs mt-0.5" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  +{formatMoney(gain)}
+                  <Private>+{formatMoney(gain)}</Private>
                 </div>
               </div>
             )

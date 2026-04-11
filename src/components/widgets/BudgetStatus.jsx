@@ -4,6 +4,7 @@ import { TrafficLight } from '../ui/TrafficLight'
 import { useBudget } from '../../hooks/useBudget'
 import { useData } from '../../context/DataContext'
 import { formatMoney } from '../../lib/formatters'
+import { Private } from '../ui/Private'
 
 export function BudgetStatus() {
   const { currentWeekSpend, latestEntry } = useBudget()
@@ -26,8 +27,8 @@ export function BudgetStatus() {
                   <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{cat}</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  <span style={{ color: 'var(--text-primary)' }}>{formatMoney(spent)}</span>
-                  <span style={{ color: 'var(--text-dim)' }}>/{formatMoney(target)}</span>
+                  <span style={{ color: 'var(--text-primary)' }}><Private>{formatMoney(spent)}</Private></span>
+                  <span style={{ color: 'var(--text-dim)' }}>/<Private>{formatMoney(target)}</Private></span>
                 </div>
               </div>
               <ProgressBar value={spent} max={target} color="traffic" height={4} />
