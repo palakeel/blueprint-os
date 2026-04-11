@@ -1,5 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { formatMoney } from '../../lib/formatters'
+import { usePrivacy } from '../../context/PrivacyContext'
+import { Private } from '../ui/Private'
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -7,13 +9,14 @@ function CustomTooltip({ active, payload, label }) {
     <div className="px-3 py-2 rounded border text-xs" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
       <div style={{ color: 'var(--text-secondary)' }}>{label}</div>
       <div className="font-semibold mt-0.5" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
-        {formatMoney(payload[0].value)}
+        <Private>{formatMoney(payload[0].value)}</Private>
       </div>
     </div>
   )
 }
 
 export function NetWorthLineChart({ data, range = '1Y' }) {
+  const { privacyMode } = usePrivacy()
   const now = new Date()
   const cutoff = {
     '3M':  new Date(now.getFullYear(), now.getMonth() - 3,  1),
@@ -41,7 +44,7 @@ export function NetWorthLineChart({ data, range = '1Y' }) {
           tickLine={false}
         />
         <YAxis
-          tickFormatter={v => formatMoney(v)}
+          tickFormatter={v => privacyMode ? '••••' : formatMoney(v)}
           tick={{ fill: 'var(--text-dim)', fontSize: 10, fontFamily: 'JetBrains Mono' }}
           axisLine={false}
           tickLine={false}

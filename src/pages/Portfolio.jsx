@@ -187,17 +187,17 @@ export function Portfolio() {
                         {pos.ticker}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                        {pos.shares}
+                        <Private>{pos.shares}</Private>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                        {formatMoney(pos.avg_cost, 2)}
+                        <Private>{formatMoney(pos.avg_cost, 2)}</Private>
                       </td>
                       {priceStatus === 'connected' && (
                         <td className="px-4 py-3 text-right tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                          <div style={{ color: 'var(--text-primary)' }}>{livePrice ? formatMoney(livePrice, 2) : '—'}</div>
+                          <div style={{ color: 'var(--text-primary)' }}><Private>{livePrice ? formatMoney(livePrice, 2) : '—'}</Private></div>
                           {prices[pos.ticker] && (
                             <div className="text-xs" style={{ color: prices[pos.ticker].changePercent >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                              {prices[pos.ticker].changePercent >= 0 ? '+' : ''}{prices[pos.ticker].changePercent.toFixed(2)}%
+                              <Private>{prices[pos.ticker].changePercent >= 0 ? '+' : ''}{prices[pos.ticker].changePercent.toFixed(2)}%</Private>
                             </div>
                           )}
                         </td>
