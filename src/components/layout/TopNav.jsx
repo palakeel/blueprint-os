@@ -28,6 +28,7 @@ export function TopNav() {
   }, [])
 
   const timeStr = time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const tzStr   = Intl.DateTimeFormat().resolvedOptions().timeZone.split('/').pop().replace(/_/g, ' ')
 
   return (
     <nav
@@ -71,7 +72,7 @@ export function TopNav() {
           className="text-sm tabular-nums"
           style={{ color: 'var(--accent-cyan)', fontFamily: "'JetBrains Mono', monospace" }}
         >
-          {timeStr}
+          {timeStr} <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{tzStr}</span>
         </span>
         <button
           onClick={toggle}
