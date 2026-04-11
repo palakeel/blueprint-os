@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary:     #0a0e1a;
-  --bg-secondary:   #111827;
-  --bg-tertiary:    #1f2937;
-  --accent-green:   #00ff88;
-  --accent-amber:   #fbbf24;
-  --accent-red:     #ff4444;
-  --accent-blue:    #3b82f6;
-  --accent-cyan:    #06b6d4;
-  --text-primary:   #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-dim:       #4b5563;
-  --border:         #1f2937;
+  --bg-primary:     #000000;
+  --bg-secondary:   #0f0f0f;
+  --bg-tertiary:    #1a1a1a;
+  --accent-green:   #00ff41;
+  --accent-amber:   #ff8c00;
+  --accent-red:     #ff3333;
+  --accent-blue:    #0088ff;
+  --accent-cyan:    #00d4ff;
+  --text-primary:   #ffffff;
+  --text-secondary: #a0a0a0;
+  --text-dim:       #444444;
+  --border:         #222222;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -28,7 +28,7 @@ body {
 #root { min-height: 100svh; }
 
 .stat-card { transition: box-shadow 0.2s ease; }
-.stat-card:hover { box-shadow: 0 0 12px var(--accent-blue); }
+.stat-card:hover { box-shadow: 0 0 10px rgba(255, 140, 0, 0.25); }
 
 @keyframes grow-width {
   from { width: 0%; }
