@@ -58,7 +58,7 @@ export default async function handler(req, res) {
   if (!accessToken) return res.status(401).json({ error: 'not_connected' })
 
   const quotesRes = await fetch(
-    `https://api.schwabapi.com/marketdata/v1/quotes?symbols=${encodeURIComponent(tickers)}&fields=quote`,
+    `https://api.schwabapi.com/marketdata/v1/quotes?symbols=${encodeURIComponent(tickers)}&fields=quote,extended`,
     { headers: { 'Authorization': `Bearer ${accessToken}` } }
   )
 
@@ -68,14 +68,29 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: 'quotes_failed', details: raw })
   }
 
-  // Normalize to { TICKER: { price, change, changePercent } }
+  // Normalize to { TICKER: { price, change, changePercent, closePrice, isExtended } }
   const result = {}
   for (const [symbol, data] of Object.entries(raw)) {
-    const q = data.quote ?? data
+    const q = data.quote    ?? {}
+    const e = data.extended ?? {}
+
+    // Use extended hours price if available, otherwise regular session last/close
+    const extPrice   = e.lastPrice
+    const regPrice   = q.lastPrice ?? q.mark
+    const closePrice = q.closePrice ?? q.regularMarketLastPrice
+
+    const price = extPrice ?? regPrice ?? closePrice ?? 0
+
+    // Change is always vs previous regular close
+    const change        = q.netChange ?? (price - (closePrice ?? price))
+    const changePercent = q.netPercentChangeInDouble ?? (closePrice ? ((price - closePrice) / closePrice) * 100 : 0)
+
     result[symbol] = {
-      price:         q.lastPrice ?? q.mark ?? q.closePrice ?? 0,
-      change:        q.netChange ?? 0,
-      changePercent: q.netPercentChangeInDouble ?? 0,
+      price,
+      change,
+      changePercent,
+      closePrice: closePrice ?? price,
+      isExtended: !!extPrice,
     }
   }
 
