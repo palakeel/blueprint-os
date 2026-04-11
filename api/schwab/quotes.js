@@ -68,29 +68,32 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: 'quotes_failed', details: raw })
   }
 
-  // Normalize to { TICKER: { price, change, changePercent, closePrice, isExtended } }
+  // Determine market session based on ET time
+  const nowET    = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+  const hour     = nowET.getHours()
+  const minute   = nowET.getMinutes()
+  const day      = nowET.getDay() // 0=Sun, 6=Sat
+  const isWeekday = day >= 1 && day <= 5
+  const minuteOfDay = hour * 60 + minute
+  const isMarketOpen = isWeekday && minuteOfDay >= 570 && minuteOfDay < 960 // 9:30–16:00 ET
+  const session = isMarketOpen ? 'regular' : 'after'
+
+  // Normalize to { TICKER: { price, change, changePercent, session } }
   const result = {}
   for (const [symbol, data] of Object.entries(raw)) {
-    const q = data.quote    ?? {}
-    const e = data.extended ?? {}
+    const q = data.quote ?? {}
 
-    // Use extended hours price if available, otherwise regular session last/close
-    const extPrice   = e.lastPrice
-    const regPrice   = q.lastPrice ?? q.mark
-    const closePrice = q.closePrice ?? q.regularMarketLastPrice
-
-    const price = extPrice ?? regPrice ?? closePrice ?? 0
-
-    // Change is always vs previous regular close
-    const change        = q.netChange ?? (price - (closePrice ?? price))
-    const changePercent = q.netPercentChangeInDouble ?? (closePrice ? ((price - closePrice) / closePrice) * 100 : 0)
+    // Always use last regular session close (4 PM ET)
+    const price         = q.closePrice ?? q.regularMarketLastPrice ?? q.lastPrice ?? q.mark ?? 0
+    const prevClose     = q.closePrice ?? price
+    const change        = q.netChange ?? 0
+    const changePercent = q.netPercentChangeInDouble ?? 0
 
     result[symbol] = {
       price,
       change,
       changePercent,
-      closePrice: closePrice ?? price,
-      isExtended: !!extPrice,
+      session,
     }
   }
 

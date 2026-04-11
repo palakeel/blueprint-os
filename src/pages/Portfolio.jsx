@@ -97,7 +97,15 @@ export function Portfolio() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Blueprint Portfolio</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Blueprint Portfolio</h1>
+            {priceStatus === 'connected' && (() => {
+              const session = Object.values(prices)[0]?.session
+              return session === 'regular'
+                ? <span className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-green)' }}>☀ RH</span>
+                : <span className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-amber)' }}>🌙 AH</span>
+            })()}
+          </div>
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             <span className="tabular-nums text-sm" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
               {formatMoney(priceStatus === 'connected' ? totalMarketValue : totalCost)}
@@ -183,12 +191,7 @@ export function Portfolio() {
                     </td>
                     {priceStatus === 'connected' && (
                       <td className="px-4 py-3 text-right tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                        <div className="flex items-center justify-end gap-1">
-                          <span style={{ color: 'var(--text-primary)' }}>{livePrice ? formatMoney(livePrice, 2) : '—'}</span>
-                          {prices[pos.ticker]?.isExtended && (
-                            <span className="text-[9px] px-1 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-amber)' }}>AH</span>
-                          )}
-                        </div>
+                        <div style={{ color: 'var(--text-primary)' }}>{livePrice ? formatMoney(livePrice, 2) : '—'}</div>
                         {prices[pos.ticker] && (
                           <div className="text-xs" style={{ color: prices[pos.ticker].changePercent >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
                             {prices[pos.ticker].changePercent >= 0 ? '+' : ''}{prices[pos.ticker].changePercent.toFixed(2)}%
