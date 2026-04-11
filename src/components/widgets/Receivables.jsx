@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { StatCard } from '../ui/StatCard'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
-import { formatMoney } from '../../lib/formatters'
+import { formatMoney, localDateString } from '../../lib/formatters'
 import { supabase } from '../../lib/supabase'
 import { CheckCircle, Plus, ChevronDown, Pencil, Trash2 } from 'lucide-react'
 
@@ -22,10 +22,20 @@ export function Receivables() {
   const total    = pending.reduce((s, r) => s + r.amount, 0)
 
   const markReceived = async (id) => {
-    const now = new Date().toISOString()
-    setReceivables(prev => prev.map(r => r.id === id ? { ...r, is_received: true, received_date: now } : r))
-    if (user && !id.startsWith('seed')) {
-      await supabase.from('receivables').update({ is_received: true, received_date: now }).eq('id', id)
+    const now = localDateString()
+    const isTemp = id.startsWith('seed') || id.startsWith('local')
+    if (user && isTemp) {
+      // Seed/local entries were never saved to Supabase — insert first, then mark received
+      const rec = receivables.find(r => r.id === id)
+      const { data } = await supabase.from('receivables')
+        .insert({ person_name: rec.person_name, amount: rec.amount, description: rec.description, created_date: rec.created_date, is_received: true, received_date: now, user_id: user.id })
+        .select().single()
+      if (data) setReceivables(prev => prev.map(r => r.id === id ? data : r))
+    } else {
+      setReceivables(prev => prev.map(r => r.id === id ? { ...r, is_received: true, received_date: now } : r))
+      if (user) {
+        await supabase.from('receivables').update({ is_received: true, received_date: now }).eq('id', id)
+      }
     }
   }
 
