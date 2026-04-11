@@ -265,7 +265,7 @@ export function Portfolio() {
       </div>
 
       {/* DCA Tracker + Allocation Chart */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="rounded-lg border p-5" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>DCA Tracker</h2>
@@ -302,7 +302,7 @@ export function Portfolio() {
           {!user && <p className="text-xs text-center mt-2" style={{ color: 'var(--text-dim)' }}>Sign in to track DCA</p>}
         </div>
 
-        <div className="rounded-lg border p-5" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
+        <div className="md:col-span-2 rounded-lg border p-5" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Allocation vs Target</h2>
           <p className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>
             {priceStatus === 'connected' ? 'Based on live market value' : 'Based on cost basis (no live prices)'}
