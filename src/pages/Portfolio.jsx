@@ -3,8 +3,8 @@ import { useData }          from '../context/DataContext'
 import { useAuth }          from '../context/AuthContext'
 import { AllocationChart }  from '../components/charts/AllocationChart'
 import { supabase }         from '../lib/supabase'
-import { formatMoney, formatDate } from '../lib/formatters'
-import { CheckCircle, Clock } from 'lucide-react'
+import { formatMoney } from '../lib/formatters'
+import { CheckCircle, Clock, RefreshCw, Wifi, WifiOff } from 'lucide-react'
 
 function getDCAPeriod() {
   const now    = new Date()
@@ -26,12 +26,38 @@ export function Portfolio() {
   const { user } = useAuth()
   const [dcaConfirmed, setDcaConfirmed] = useState(false)
   const [confirming,   setConfirming]   = useState(false)
+  const [prices,       setPrices]       = useState({})
+  const [priceStatus,  setPriceStatus]  = useState('idle') // idle | loading | connected | error | not_connected
 
   const period        = getDCAPeriod()
   const totalCost     = portfolio.reduce((s, p) => s + p.shares * p.avg_cost, 0)
   const totalDCA      = portfolio.reduce((s, p) => s + (p.dca_biweekly ?? 0), 0)
   const activePos     = portfolio.filter(p => p.shares > 0)
   const limitOrders   = portfolio.filter(p => p.shares === 0 || (p.notes ?? '').toLowerCase().includes('limit'))
+
+  const totalMarketValue = activePos.reduce((s, p) => s + p.shares * (prices[p.ticker]?.price ?? p.avg_cost), 0)
+
+  const fetchPrices = async () => {
+    if (activePos.length === 0) return
+    setPriceStatus('loading')
+    const tickers = activePos.map(p => p.ticker).join(',')
+    try {
+      const res = await fetch(`/api/schwab/quotes?tickers=${encodeURIComponent(tickers)}`)
+      const data = await res.json()
+      if (res.status === 401 || data.error === 'not_connected') {
+        setPriceStatus('not_connected')
+      } else if (!res.ok) {
+        setPriceStatus('error')
+      } else {
+        setPrices(data)
+        setPriceStatus('connected')
+      }
+    } catch {
+      setPriceStatus('error')
+    }
+  }
+
+  useEffect(() => { fetchPrices() }, [portfolio.length])
 
   // Check if current period is already confirmed
   useEffect(() => {
@@ -69,11 +95,48 @@ export function Portfolio() {
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Blueprint Portfolio</h1>
-        <span className="tabular-nums text-sm" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
-          {formatMoney(totalCost)} cost basis
-        </span>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Blueprint Portfolio</h1>
+          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+            <span className="tabular-nums text-sm" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
+              {formatMoney(priceStatus === 'connected' ? totalMarketValue : totalCost)}
+              <span className="text-xs ml-1" style={{ color: 'var(--text-dim)' }}>
+                {priceStatus === 'connected' ? 'market value' : 'cost basis'}
+              </span>
+            </span>
+            {priceStatus === 'connected' && (
+              <span className="tabular-nums text-sm" style={{ color: totalMarketValue - totalCost >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontFamily: "'JetBrains Mono', monospace" }}>
+                {totalMarketValue - totalCost >= 0 ? '+' : ''}{formatMoney(totalMarketValue - totalCost)} P&L
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {priceStatus === 'not_connected' && (
+            <a href="/api/schwab/auth"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium"
+              style={{ backgroundColor: 'var(--accent-amber)', color: '#0a0e1a' }}>
+              <WifiOff size={12} /> Connect Schwab
+            </a>
+          )}
+          {priceStatus === 'connected' && (
+            <button onClick={fetchPrices} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border"
+              style={{ color: 'var(--accent-green)', borderColor: 'var(--accent-green)' }}>
+              <Wifi size={12} /> Live
+              <RefreshCw size={11} />
+            </button>
+          )}
+          {priceStatus === 'loading' && (
+            <span className="text-xs" style={{ color: 'var(--text-dim)' }}>Fetching prices...</span>
+          )}
+          {priceStatus === 'error' && (
+            <button onClick={fetchPrices} className="text-xs px-2 py-1 rounded border"
+              style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }}>
+              Retry
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Holdings Table */}
@@ -88,8 +151,10 @@ export function Portfolio() {
                 <th className="text-left px-4 py-3 font-medium">Ticker</th>
                 <th className="text-right px-4 py-3 font-medium">Shares</th>
                 <th className="text-right px-4 py-3 font-medium">Avg Cost</th>
-                <th className="text-right px-4 py-3 font-medium">Cost Basis</th>
-                <th className="text-right px-4 py-3 font-medium">Cost Alloc</th>
+                {priceStatus === 'connected' && <th className="text-right px-4 py-3 font-medium">Price</th>}
+                <th className="text-right px-4 py-3 font-medium">{priceStatus === 'connected' ? 'Mkt Value' : 'Cost Basis'}</th>
+                {priceStatus === 'connected' && <th className="text-right px-4 py-3 font-medium">P&L</th>}
+                <th className="text-right px-4 py-3 font-medium">Alloc</th>
                 <th className="text-right px-4 py-3 font-medium">Target</th>
                 <th className="text-right px-4 py-3 font-medium">DCA/2wk</th>
               </tr>
@@ -97,8 +162,13 @@ export function Portfolio() {
             <tbody>
               {activePos.map(pos => {
                 const costBasis   = pos.shares * pos.avg_cost
-                const costAlloc   = totalCost > 0 ? (costBasis / totalCost) * 100 : 0
-                const diff        = costAlloc - (pos.target_allocation ?? 0)
+                const livePrice   = prices[pos.ticker]?.price
+                const mktValue    = livePrice ? pos.shares * livePrice : costBasis
+                const pnl         = livePrice ? mktValue - costBasis : null
+                const pnlPct      = pnl != null ? (pnl / costBasis) * 100 : null
+                const baseValue   = priceStatus === 'connected' ? totalMarketValue : totalCost
+                const alloc       = baseValue > 0 ? (mktValue / baseValue) * 100 : 0
+                const diff        = alloc - (pos.target_allocation ?? 0)
                 const diffColor   = Math.abs(diff) <= 3 ? 'var(--accent-green)' : Math.abs(diff) <= 8 ? 'var(--accent-amber)' : 'var(--accent-red)'
                 return (
                   <tr key={pos.id} className="border-t text-sm" style={{ borderColor: 'var(--border)' }}>
@@ -111,11 +181,35 @@ export function Portfolio() {
                     <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
                       {formatMoney(pos.avg_cost, 2)}
                     </td>
+                    {priceStatus === 'connected' && (
+                      <td className="px-4 py-3 text-right tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        <div style={{ color: 'var(--text-primary)' }}>{livePrice ? formatMoney(livePrice, 2) : '—'}</div>
+                        {prices[pos.ticker] && (
+                          <div className="text-xs" style={{ color: prices[pos.ticker].changePercent >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                            {prices[pos.ticker].changePercent >= 0 ? '+' : ''}{prices[pos.ticker].changePercent.toFixed(2)}%
+                          </div>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                      {formatMoney(costBasis)}
+                      {formatMoney(mktValue)}
                     </td>
+                    {priceStatus === 'connected' && (
+                      <td className="px-4 py-3 text-right tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        {pnl != null ? (
+                          <>
+                            <div style={{ color: pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                              {pnl >= 0 ? '+' : ''}{formatMoney(pnl)}
+                            </div>
+                            <div className="text-xs" style={{ color: pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                              {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%
+                            </div>
+                          </>
+                        ) : '—'}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right tabular-nums" style={{ color: diffColor, fontFamily: "'JetBrains Mono', monospace" }}>
-                      {costAlloc.toFixed(1)}%
+                      {alloc.toFixed(1)}%
                       <span className="text-xs ml-1" style={{ color: 'var(--text-dim)' }}>
                         ({diff >= 0 ? '+' : ''}{diff.toFixed(1)})
                       </span>
@@ -188,8 +282,10 @@ export function Portfolio() {
         {/* Allocation Chart */}
         <div className="rounded-lg border p-5" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Allocation vs Target</h2>
-          <p className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>Based on cost basis (no live prices)</p>
-          <AllocationChart portfolio={portfolio} />
+          <p className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>
+            {priceStatus === 'connected' ? 'Based on live market value' : 'Based on cost basis (no live prices)'}
+          </p>
+          <AllocationChart portfolio={portfolio} prices={priceStatus === 'connected' ? prices : {}} />
         </div>
       </div>
 

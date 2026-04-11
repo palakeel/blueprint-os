@@ -14,16 +14,23 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
-export function AllocationChart({ portfolio }) {
-  const totalCost = portfolio.reduce((s, p) => s + p.shares * p.avg_cost, 0)
+export function AllocationChart({ portfolio, prices = {} }) {
+  const total = portfolio.reduce((s, p) => {
+    const price = prices[p.ticker]?.price ?? p.avg_cost
+    return s + p.shares * price
+  }, 0)
 
   const data = portfolio
     .filter(p => p.target_allocation > 0)
-    .map(p => ({
-      ticker:  p.ticker,
-      Current: totalCost > 0 ? parseFloat(((p.shares * p.avg_cost / totalCost) * 100).toFixed(1)) : 0,
-      Target:  p.target_allocation,
-    }))
+    .map(p => {
+      const price = prices[p.ticker]?.price ?? p.avg_cost
+      const value = p.shares * price
+      return {
+        ticker:  p.ticker,
+        Current: total > 0 ? parseFloat(((value / total) * 100).toFixed(1)) : 0,
+        Target:  p.target_allocation,
+      }
+    })
 
   return (
     <ResponsiveContainer width="100%" height={220}>

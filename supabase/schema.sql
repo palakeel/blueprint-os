@@ -107,6 +107,15 @@ create policy "own_data" on portfolio_positions for all using (auth.uid() = user
 create policy "own_data" on dca_confirmations   for all using (auth.uid() = user_id);
 create policy "own_data" on gamification        for all using (auth.uid() = user_id);
 
+-- Schwab OAuth tokens (singleton row, accessed only via service role)
+create table if not exists schwab_tokens (
+  id            text primary key default 'singleton',
+  access_token  text not null,
+  refresh_token text not null,
+  expires_at    timestamptz not null,
+  updated_at    timestamptz default now()
+);
+
 -- Seed milestones for a new user (call via Supabase Edge Function or manually)
 -- insert into milestones (user_id, name, target_amount) values
 --   ($USER_ID, 'Runway',          47000),
