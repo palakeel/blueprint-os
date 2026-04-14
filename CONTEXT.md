@@ -313,3 +313,74 @@ All Phase 1 deliverables built and compiling cleanly:
 - ✅ Seed data pre-loaded (April 2026 baseline, ~$97,504 NW)
 
 **Next step before using:** Run `supabase/schema.sql` in your Supabase SQL Editor to create all tables.
+
+---
+
+## Changelog
+
+### 2026-04-07
+- Fixed date timezone bug: chart was showing wrong date due to UTC midnight parsing. Fixed by appending `T12:00:00` to date-only strings everywhere.
+- Fixed receivables not persisting: seed receivable (id: `seed-r1`) was never saved to Supabase on mark-as-received. Fixed by inserting to DB first if id starts with `seed` or `local`.
+- Added edit/delete to all entry forms (budget, net worth). Pencil/trash icons appear on hover in history tables.
+
+### 2026-04-08
+- Integrated Schwab Market Data API for live portfolio prices. OAuth2 flow via Vercel serverless functions (`api/schwab/`). Tokens stored in `schwab_tokens` table (singleton pattern).
+- Portfolio page fully rewritten: correct positions with real shares/avg cost, trade log form, edit position form, live price columns, session badge (RH/AH).
+- Allocation chart redesigned: horizontal bars per ticker, color-coded green/amber/red by distance from target, vertical marker line at target.
+- Schwab price field: uses `mark` (confirmed = end-of-day price, not `lastPrice` or `closePrice`).
+
+### 2026-04-09
+- Added privacy mode: Eye/EyeOff toggle in TopNav and BottomNav. Blurs all financial values using CSS `filter: blur(8px)` via `<Private>` component. Persisted in localStorage.
+- Fixed milestone ETAs: was showing Jul 2576 due to linear growth formula. Switched to compound growth (8% annual + cash contributions).
+- Changed color scheme to pure Bloomberg Terminal black (`--bg-primary: #000000`), replacing dark navy.
+- Added auto sign-out after inactivity. Initially used `setTimeout` (1 hour) but browser throttles long timers in background tabs. Fixed with `setInterval` (checks every minute) + `visibilitychange` listener. Reduced to 30 minutes given financial data sensitivity.
+- Added timezone label to clock. Hardcoded to `America/Los_Angeles` (user is in SF; system timezone showed Chicago due to VPN).
+- Clock is now clickable to cycle through PT → ET → CT → UTC. Selection persisted in localStorage.
+
+### 2026-04-13
+- Fixed budget targets being treated as weekly. CONTEXT.md confirms targets are monthly (`$550/month` total). Changed `useBudget` and `BudgetEntryForm` so the monthly targets are divided by 4.33 to derive the weekly allowance shown in the form and used for pace calculations.
+- Fixed auto sign-out not firing: browser throttles long `setTimeout` in background tabs. Replaced with `setInterval` (checks every 60s) + `visibilitychange` event. Reduced inactivity window to 30 min.
+- Clock timezone now cycles PT → ET → CT → UTC on click. Persisted in localStorage.
+- ANTHROPIC_API_KEY added to Vercel environment variables (Tier 2 account, $40 credits loaded).
+
+---
+
+## Next Feature: AI-Powered Budget Import (IN PROGRESS)
+
+### Goal
+Replace manual weekly budget entry with a screenshot-based import flow. User uploads screenshots from AMEX, RH Gold, and Coinbase card apps. Claude AI reads the transactions, auto-categorizes them, and presents a line-item review screen before saving.
+
+### Target weekly workflow
+1. Screenshot transaction views from each card app (30 sec)
+2. Upload screenshots on Budget page (30 sec)
+3. Review AI-categorized line items, fix any misses (2-3 min)
+4. Confirm → saved as weekly budget entry (10 sec)
+
+### Spending buckets
+- **Variable (weekly tracking)** → CC screenshots + manual one-offs (Venmo/cash)
+  - These map to the 8 budget categories ($550/mo total)
+- **Fixed (monthly, separate)** → Rent, utilities, subscriptions ($3,557/mo)
+  - Pre-populated, user notes deviations only
+- **CC payments from bank ACH** → IGNORE, not expenses (already captured at swipe)
+
+### Edge cases to handle
+1. **Duplicate detection** — filter by week date range at parse time; flag if transaction date outside selected week
+2. **Pending vs posted** — prompt Claude to extract posted transactions only; user should screenshot after 1-2 day settlement
+3. **Multiple card uploads** — accept up to 5 images in one session, merge into single transaction list
+4. **Week boundary spillover** — pass week_start/week_end to Claude so it filters to correct range
+5. **Unreadable screenshots** — clear error state with retry prompt
+6. **Amazon transactions** — default to Groceries (user's primary Amazon use); reviewable
+
+### Architecture
+- `api/budget/parse.js` — Vercel serverless function, accepts multipart images, calls Claude claude-haiku-4-5-20251001 (vision), returns `[{date, merchant, amount, category}]`
+- `src/components/forms/BudgetImportFlow.jsx` — multi-step UI:
+  - Step 1: Upload (drag-drop or tap, multiple files, preview thumbnails)
+  - Step 2: Review (full transaction table, category dropdown per row, running totals per category)
+  - Step 3: Confirm → saves as budget entry via existing Supabase logic
+- Manual one-off entry remains available as secondary flow for Venmo/cash
+
+### Future: LLM Chat Window
+- After import flow ships, wrap it in a chat interface
+- User can paste context ("split rent 3 ways this month"), ask questions ("am I on track?"), add one-offs conversationally
+- Same Claude API backend, chat layer on top
+- This is why Tier 2 Anthropic account was set up

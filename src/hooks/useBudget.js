@@ -4,8 +4,8 @@ export function useBudget() {
   const { budgetEntries, budgetTargets } = useData()
   const latestEntry = budgetEntries[0] ?? null
 
-  const weeklyBudget  = Object.values(budgetTargets).reduce((a, b) => a + b, 0)
-  const monthlyBudget = weeklyBudget * 4
+  const monthlyBudget = Object.values(budgetTargets).reduce((a, b) => a + b, 0)
+  const weeklyBudget  = monthlyBudget / 4.33
 
   // Monthly pace from last 4 weekly entries
   const last4 = budgetEntries.slice(0, 4)

@@ -15,20 +15,37 @@ const NAV_LINKS = [
   { path: '/settings',   label: 'Settings' },
 ]
 
+const TIMEZONES = [
+  { tz: 'America/Los_Angeles', label: 'PT' },
+  { tz: 'America/New_York',    label: 'ET' },
+  { tz: 'America/Chicago',     label: 'CT' },
+  { tz: 'UTC',                 label: 'UTC' },
+]
+
 export function TopNav() {
   const location = useLocation()
   const { user, signOut } = useAuth()
   const { lastUpdated } = useData()
   const { privacyMode, toggle } = usePrivacy()
   const [time, setTime] = useState(new Date())
+  const [tzIndex, setTzIndex] = useState(() => {
+    try { return parseInt(localStorage.getItem('blueprint-tz') ?? '0', 10) } catch { return 0 }
+  })
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
-  const timeStr = time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Los_Angeles' })
-  const tzStr   = time.toLocaleTimeString('en-US', { timeZoneName: 'short', timeZone: 'America/Los_Angeles' }).split(' ').pop()
+  const cycleTz = () => {
+    const next = (tzIndex + 1) % TIMEZONES.length
+    setTzIndex(next)
+    try { localStorage.setItem('blueprint-tz', String(next)) } catch {}
+  }
+
+  const { tz } = TIMEZONES[tzIndex]
+  const timeStr = time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: tz })
+  const tzStr   = time.toLocaleTimeString('en-US', { timeZoneName: 'short', timeZone: tz }).split(' ').pop()
 
   return (
     <nav
@@ -68,12 +85,14 @@ export function TopNav() {
             {formatRelativeDate(lastUpdated)}
           </span>
         )}
-        <span
-          className="text-sm tabular-nums"
-          style={{ color: 'var(--accent-cyan)', fontFamily: "'JetBrains Mono', monospace" }}
+        <button
+          onClick={cycleTz}
+          className="text-sm tabular-nums transition-opacity hover:opacity-70"
+          style={{ color: 'var(--accent-cyan)', fontFamily: "'JetBrains Mono', monospace", background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          title="Click to change timezone"
         >
-          {timeStr} <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{tzStr}</span>
-        </span>
+          {timeStr} <span style={{ color: 'var(--text-dim)' }}>{tzStr}</span>
+        </button>
         <button
           onClick={toggle}
           className="p-1.5 rounded transition-opacity hover:opacity-70"

@@ -34,7 +34,8 @@ export function BudgetEntryForm({ entry, onSuccess }) {
   const [error,  setError]  = useState('')
 
   const totalSpent   = Object.values(categories).reduce((s, v) => s + (parseFloat(v) || 0), 0)
-  const weeklyBudget = Object.values(budgetTargets).reduce((a, b) => a + b, 0)
+  const monthlyBudget = Object.values(budgetTargets).reduce((a, b) => a + b, 0)
+  const weeklyBudget  = monthlyBudget / 4.33
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -104,7 +105,7 @@ export function BudgetEntryForm({ entry, onSuccess }) {
             <div key={cat} className="flex items-center gap-3">
               <label className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
                 {cat}
-                <span className="ml-1" style={{ color: 'var(--text-dim)' }}>({formatMoney(target)}/wk)</span>
+                <span className="ml-1" style={{ color: 'var(--text-dim)' }}>({formatMoney(target / 4.33)}/wk)</span>
               </label>
               <div className="relative w-28">
                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--text-dim)' }}>$</span>
