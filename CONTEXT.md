@@ -345,7 +345,7 @@ All Phase 1 deliverables built and compiling cleanly:
 
 ---
 
-## Next Feature: AI-Powered Budget Import (IN PROGRESS)
+## AI-Powered Budget Import (SHIPPED 2026-04-13)
 
 ### Goal
 Replace manual weekly budget entry with a screenshot-based import flow. User uploads screenshots from AMEX, RH Gold, and Coinbase card apps. Claude AI reads the transactions, auto-categorizes them, and presents a line-item review screen before saving.
@@ -371,16 +371,16 @@ Replace manual weekly budget entry with a screenshot-based import flow. User upl
 5. **Unreadable screenshots** — clear error state with retry prompt
 6. **Amazon transactions** — default to Groceries (user's primary Amazon use); reviewable
 
-### Architecture
-- `api/budget/parse.js` — Vercel serverless function, accepts multipart images, calls Claude claude-haiku-4-5-20251001 (vision), returns `[{date, merchant, amount, category}]`
-- `src/components/forms/BudgetImportFlow.jsx` — multi-step UI:
-  - Step 1: Upload (drag-drop or tap, multiple files, preview thumbnails)
-  - Step 2: Review (full transaction table, category dropdown per row, running totals per category)
-  - Step 3: Confirm → saves as budget entry via existing Supabase logic
-- Manual one-off entry remains available as secondary flow for Venmo/cash
+### Architecture (built)
+- `api/budget/parse.js` — Vercel serverless function. Accepts JSON `{ images: [{data, mediaType}], weekStart, weekEnd }`. Calls Claude Haiku vision. Returns `{ transactions: [{date, merchant, amount, category}] }`. Images are base64-encoded client-side after canvas compression (max 1024px wide, JPEG 0.75 quality) to stay well under Vercel's 4.5MB body limit.
+- `src/components/forms/BudgetImportFlow.jsx` — 4-step UI (upload → loading → review → done):
+  - Upload: drag-drop or file picker, up to 5 images, thumbnails with remove
+  - Loading: spinner while Claude processes
+  - Review: editable table (date/merchant/amount/category), per-category totals, add/delete rows, notes field
+  - Done: confirmation with totals → calls `onSuccess` to close panel
+- `src/pages/Budget.jsx` — header now has "AI Import" (blue, sparkles icon) + "Manual" buttons; import flow replaces left panel when active
 
 ### Future: LLM Chat Window
-- After import flow ships, wrap it in a chat interface
-- User can paste context ("split rent 3 ways this month"), ask questions ("am I on track?"), add one-offs conversationally
+- Wrap import flow in a conversational interface
+- User can paste context ("split rent 3 ways"), ask questions ("am I on track?"), add one-offs conversationally
 - Same Claude API backend, chat layer on top
-- This is why Tier 2 Anthropic account was set up

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { BudgetEntryForm }   from '../components/forms/BudgetEntryForm'
+import { BudgetImportFlow }  from '../components/forms/BudgetImportFlow'
 import { BudgetBarChart }    from '../components/charts/BudgetBarChart'
 import { useData }           from '../context/DataContext'
 import { calcSuggestedBudget } from '../lib/calculations'
@@ -8,12 +9,13 @@ import { exportBudgetCSV } from '../lib/csvExport'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Private } from '../components/ui/Private'
-import { Lightbulb, Download, Pencil, Trash2 } from 'lucide-react'
+import { Lightbulb, Download, Pencil, Trash2, Sparkles } from 'lucide-react'
 
 export function Budget() {
   const { budgetEntries, budgetTargets, setBudgetEntries } = useData()
   const { user } = useAuth()
-  const [showForm, setShowForm] = useState(false)
+  const [showForm,    setShowForm]    = useState(false)
+  const [showImport,  setShowImport]  = useState(false)
   const [editingEntry, setEditingEntry] = useState(null)
   const weeklyBudget = Object.values(budgetTargets).reduce((a, b) => a + b, 0)
 
@@ -28,6 +30,25 @@ export function Budget() {
   const startEdit = (entry) => {
     setEditingEntry(entry)
     setShowForm(false)
+    setShowImport(false)
+  }
+
+  const openImport = () => {
+    setShowImport(true)
+    setShowForm(false)
+    setEditingEntry(null)
+  }
+
+  const openManual = () => {
+    setShowForm(true)
+    setShowImport(false)
+    setEditingEntry(null)
+  }
+
+  const closePanel = () => {
+    setShowForm(false)
+    setShowImport(false)
+    setEditingEntry(null)
   }
 
   const suggestions = calcSuggestedBudget(budgetEntries)
@@ -46,26 +67,55 @@ export function Budget() {
               <Download size={12} /> CSV
             </button>
           )}
-          <button
-            onClick={() => { setShowForm(f => !f); setEditingEntry(null) }}
-            className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
-            style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
-          >
-            {showForm || editingEntry ? 'Cancel' : '+ New Entry'}
-          </button>
+          {(showForm || showImport || editingEntry) ? (
+            <button
+              onClick={closePanel}
+              className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
+              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+            >
+              Cancel
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={openImport}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
+                style={{ backgroundColor: 'var(--accent-blue)', color: 'white' }}
+              >
+                <Sparkles size={13} /> AI Import
+              </button>
+              <button
+                onClick={openManual}
+                className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+              >
+                + Manual
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-lg p-5 border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-          {showForm || editingEntry ? (
+          {showImport ? (
+            <>
+              <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+                AI Screenshot Import
+              </h2>
+              <BudgetImportFlow
+                onSuccess={closePanel}
+                onCancel={openManual}
+              />
+            </>
+          ) : (showForm || editingEntry) ? (
             <>
               <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
                 {editingEntry ? 'Edit Entry' : 'New Entry'}
               </h2>
               <BudgetEntryForm
                 entry={editingEntry ?? undefined}
-                onSuccess={() => { setShowForm(false); setEditingEntry(null) }}
+                onSuccess={closePanel}
               />
             </>
           ) : (
@@ -75,8 +125,11 @@ export function Budget() {
                 ? <BudgetBarChart entries={budgetEntries} targets={budgetTargets} />
                 : <div className="h-[200px] flex flex-col items-center justify-center gap-2">
                     <p className="text-sm" style={{ color: 'var(--text-dim)' }}>No entries yet</p>
-                    <button onClick={() => setShowForm(true)} className="text-sm" style={{ color: 'var(--accent-blue)' }}>
-                      Add your first entry →
+                    <button onClick={openImport} className="flex items-center gap-1 text-sm" style={{ color: 'var(--accent-blue)' }}>
+                      <Sparkles size={12} /> AI Import →
+                    </button>
+                    <button onClick={openManual} className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                      or enter manually
                     </button>
                   </div>
               }
