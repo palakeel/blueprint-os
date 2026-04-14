@@ -63,6 +63,7 @@ create table if not exists portfolio_positions (
   avg_cost          numeric(10, 2) not null default 0,
   target_allocation numeric(5, 2),
   dca_biweekly      numeric(8, 2),
+  account           text not null default 'Blueprint', -- 'Blueprint' | 'Roth IRA' | 'Trading'
   notes             text,
   updated_at        timestamptz default now()
 );
@@ -112,11 +113,12 @@ create table if not exists trade_history (
   id          uuid primary key default uuid_generate_v4(),
   user_id     uuid references auth.users(id) on delete cascade not null,
   ticker      text not null,
-  trade_type  text not null, -- 'DCA', 'Limit Fill', 'Manual Buy'
-  shares      numeric(10, 4) not null,
+  trade_type  text not null, -- 'DCA', 'Limit Fill', 'Manual Buy', 'Sell'
+  shares      numeric(10, 4) not null, -- always positive; trade_type indicates direction
   price       numeric(10, 2) not null,
-  total_cost  numeric(12, 2) not null,
+  total_cost  numeric(12, 2) not null, -- proceeds for sells, cost for buys
   trade_date  date not null,
+  account     text not null default 'Blueprint',
   notes       text,
   created_at  timestamptz default now()
 );

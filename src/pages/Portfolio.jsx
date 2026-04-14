@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useData }             from '../context/DataContext'
+import { useData, ACCOUNTS }   from '../context/DataContext'
 import { useAuth }             from '../context/AuthContext'
 import { AllocationChart }     from '../components/charts/AllocationChart'
 import { LogTradeForm }        from '../components/forms/LogTradeForm'
@@ -33,17 +33,21 @@ export function Portfolio() {
   const [priceStatus,  setPriceStatus]  = useState('idle')
   const [panel,        setPanel]        = useState(null) // null | 'trade' | 'add' | {editPos}
   const [editingPos,   setEditingPos]   = useState(null)
+  const [activeAccount, setActiveAccount] = useState(ACCOUNTS[0])
 
-  const period      = getDCAPeriod()
-  const activePos   = portfolio.filter(p => p.shares > 0)
-  const totalCost   = activePos.reduce((s, p) => s + p.shares * p.avg_cost, 0)
-  const totalDCA    = portfolio.reduce((s, p) => s + (p.dca_biweekly ?? 0), 0)
+  const period    = getDCAPeriod()
+  // All positions with shares (used for price fetching — pull from all accounts)
+  const allActive = portfolio.filter(p => p.shares > 0)
+  // Positions scoped to the selected account tab
+  const activePos = allActive.filter(p => (p.account ?? 'Blueprint') === activeAccount)
+  const totalCost        = activePos.reduce((s, p) => s + p.shares * p.avg_cost, 0)
+  const totalDCA         = portfolio.filter(p => (p.account ?? 'Blueprint') === 'Blueprint').reduce((s, p) => s + (p.dca_biweekly ?? 0), 0)
   const totalMarketValue = activePos.reduce((s, p) => s + p.shares * (prices[p.ticker]?.price ?? p.avg_cost), 0)
 
   const fetchPrices = async () => {
-    if (activePos.length === 0) return
+    if (allActive.length === 0) return
     setPriceStatus('loading')
-    const tickers = activePos.map(p => p.ticker).join(',')
+    const tickers = allActive.map(p => p.ticker).join(',')
     try {
       const res  = await fetch(`/api/schwab/quotes?tickers=${encodeURIComponent(tickers)}`)
       const data = await res.json()
@@ -53,7 +57,7 @@ export function Portfolio() {
     } catch { setPriceStatus('error') }
   }
 
-  useEffect(() => { fetchPrices() }, [portfolio.length])
+  useEffect(() => { fetchPrices() }, [allActive.length])
 
   useEffect(() => {
     if (!user) return
@@ -91,11 +95,27 @@ export function Portfolio() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+      {/* Account Tabs */}
+      <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
+        {ACCOUNTS.map(acct => (
+          <button
+            key={acct}
+            onClick={() => { setActiveAccount(acct); setPanel(null); setEditingPos(null) }}
+            className="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px"
+            style={{
+              color:       activeAccount === acct ? 'var(--accent-cyan)' : 'var(--text-dim)',
+              borderColor: activeAccount === acct ? 'var(--accent-cyan)' : 'transparent',
+            }}>
+            {acct}
+          </button>
+        ))}
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Blueprint Portfolio</h1>
+            <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{activeAccount} Portfolio</h1>
             {priceStatus === 'connected' && (() => {
               const session = Object.values(prices)[0]?.session
               return session === 'regular'
@@ -258,8 +278,8 @@ export function Portfolio() {
               <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{panelTitle}</h2>
               <button onClick={closePanel} className="text-xs hover:opacity-70" style={{ color: 'var(--text-dim)' }}>✕</button>
             </div>
-            {panel === 'trade' && <LogTradeForm onSuccess={closePanel} />}
-            {panel === 'add'   && <EditPositionForm onSuccess={closePanel} />}
+            {panel === 'trade' && <LogTradeForm account={activeAccount} onSuccess={closePanel} />}
+            {panel === 'add'   && <EditPositionForm defaultAccount={activeAccount} onSuccess={closePanel} />}
             {editingPos        && <EditPositionForm position={editingPos} onSuccess={closePanel} />}
           </div>
         )}
@@ -275,7 +295,7 @@ export function Portfolio() {
             </span>
           </div>
           <div className="space-y-2 mb-4">
-            {portfolio.filter(p => p.dca_biweekly).map(pos => (
+            {portfolio.filter(p => (p.account ?? 'Blueprint') === 'Blueprint' && p.dca_biweekly).map(pos => (
               <div key={pos.id} className="flex justify-between items-center text-xs">
                 <span style={{ color: 'var(--accent-cyan)', fontFamily: "'JetBrains Mono', monospace" }}>{pos.ticker}</span>
                 <span className="tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { useData } from '../../context/DataContext'
+import { useData, ACCOUNTS } from '../../context/DataContext'
 
 const fieldStyle = {
   backgroundColor: 'var(--bg-primary)',
@@ -10,7 +10,7 @@ const fieldStyle = {
   fontFamily: "'JetBrains Mono', monospace",
 }
 
-export function EditPositionForm({ position, onSuccess }) {
+export function EditPositionForm({ position, defaultAccount, onSuccess }) {
   const { user } = useAuth()
   const { portfolio, setPortfolio } = useData()
 
@@ -19,6 +19,7 @@ export function EditPositionForm({ position, onSuccess }) {
   const [avgCost,    setAvgCost]    = useState(position ? String(position.avg_cost) : '')
   const [target,     setTarget]     = useState(position ? String(position.target_allocation ?? '') : '')
   const [dca,        setDca]        = useState(position ? String(position.dca_biweekly ?? '') : '')
+  const [account,    setAccount]    = useState(position?.account ?? defaultAccount ?? 'Blueprint')
   const [notes,      setNotes]      = useState(position?.notes ?? '')
   const [saving,     setSaving]     = useState(false)
   const [error,      setError]      = useState('')
@@ -36,6 +37,7 @@ export function EditPositionForm({ position, onSuccess }) {
       avg_cost:          parseFloat(avgCost) || 0,
       target_allocation: parseFloat(target) || null,
       dca_biweekly:      parseFloat(dca) || null,
+      account,
       notes:             notes || null,
       updated_at:        new Date().toISOString(),
     }
@@ -77,12 +79,22 @@ export function EditPositionForm({ position, onSuccess }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {isNew && (
-        <div>
-          <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Ticker</label>
-          <input value={ticker} onChange={e => setTicker(e.target.value.toUpperCase())}
-            placeholder="e.g. AAPL" required
-            className="w-full text-sm px-2 py-1.5 rounded border outline-none"
-            style={fieldStyle} />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Ticker</label>
+            <input value={ticker} onChange={e => setTicker(e.target.value.toUpperCase())}
+              placeholder="e.g. AAPL" required
+              className="w-full text-sm px-2 py-1.5 rounded border outline-none"
+              style={fieldStyle} />
+          </div>
+          <div>
+            <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Account</label>
+            <select value={account} onChange={e => setAccount(e.target.value)}
+              className="w-full text-sm px-2 py-1.5 rounded border outline-none"
+              style={fieldStyle}>
+              {ACCOUNTS.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
         </div>
       )}
 
