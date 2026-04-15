@@ -127,6 +127,9 @@ alter table trade_history enable row level security;
 create policy "own_data" on trade_history for all using (auth.uid() = user_id);
 
 -- Schwab OAuth tokens (singleton row, accessed only via service role)
+-- RLS is enabled with NO policies — this blocks all API access from the
+-- anon/authenticated keys. Service role bypasses RLS, so Vercel serverless
+-- functions (api/schwab/*) are unaffected.
 create table if not exists schwab_tokens (
   id            text primary key default 'singleton',
   access_token  text not null,
@@ -134,6 +137,9 @@ create table if not exists schwab_tokens (
   expires_at    timestamptz not null,
   updated_at    timestamptz default now()
 );
+
+alter table schwab_tokens enable row level security;
+-- Intentionally no policies — zero access via API keys
 
 -- Seed milestones for a new user (call via Supabase Edge Function or manually)
 -- insert into milestones (user_id, name, target_amount) values
