@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blueprint Portfolio Model v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:#0a0c10; --surface:#111318; --surface2:#181c24; --border:#1e2330; --border2:#2a3045;
+    --text:#e8eaf0; --muted:#6b7280; --dim:#3d4558;
+    --bull:#22c55e; --bull-dim:#14532d; --bull-mid:#16a34a;
+    --bear:#ef4444; --bear-dim:#7f1d1d;
+    --base:#f59e0b; --base-dim:#78350f; --base-mid:#d97706;
+    --accent:#6366f1; --accent-dim:#312e81;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;min-height:100vh;}
+  .header{border-bottom:1px solid var(--border);padding:20px 28px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;}
+  .header h1{font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;}
+  .header span{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+  .tabs{display:flex;border-bottom:1px solid var(--border);padding:0 28px;overflow-x:auto;}
+  .tab{padding:11px 18px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;font-family:'DM Mono',monospace;letter-spacing:.03em;}
+  .tab:hover{color:var(--text);}
+  .tab.active{color:var(--text);border-bottom-color:var(--accent);}
+  .content{padding:24px 28px;}
+  .section{display:none;}
+  .section.active{display:block;}
+
+  /* Analysis toolbar */
+  .analysis-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .toolbar-left{display:flex;gap:8px;align-items:center;}
+  .toolbar-right{display:flex;gap:6px;}
+  .view-btn{padding:6px 12px;border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .15s;display:flex;align-items:center;gap:5px;}
+  .view-btn:hover{color:var(--text);border-color:var(--border2);}
+  .view-btn.on{background:var(--accent-dim);border-color:var(--accent);color:#a5b4fc;}
+  .collapse-all-btn{padding:6px 12px;border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .15s;}
+  .collapse-all-btn:hover{color:var(--text);}
+  .analysis-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+
+  /* Cards view */
+  .company-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-bottom:24px;}
+  .ccard{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .15s;}
+  .ccard:hover{border-color:var(--border2);}
+  .ccard-hdr{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;}
+  .ccard-hdr:hover{background:var(--surface2);}
+  .hdr-left{display:flex;align-items:center;gap:10px;}
+  .ticker{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;}
+  .cname{font-size:11px;color:var(--muted);margin-top:1px;}
+  .hdr-right{display:flex;align-items:center;gap:8px;}
+  .alloc-badge{background:var(--accent-dim);color:#a5b4fc;font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;}
+  .chevron{font-size:12px;color:var(--muted);transition:transform .2s;display:inline-block;}
+  .chevron.open{transform:rotate(180deg);}
+  .ccard-body{overflow:hidden;max-height:2000px;transition:max-height .25s ease;}
+  .ccard-body.collapsed{max-height:0;}
+  .funds{padding:12px 16px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .fi label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:1px;font-family:'DM Mono',monospace;}
+  .fi value{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);font-weight:500;}
+  .scens{padding:12px 16px;}
+  .sc-hdrs{display:grid;grid-template-columns:52px 1fr 1fr 1fr;gap:6px;padding:0 0 5px;border-bottom:1px solid var(--border);margin-bottom:3px;}
+  .sc-hdrs span{text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  .sc-row{display:grid;grid-template-columns:52px 1fr 1fr 1fr;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);}
+  .sc-row:last-child{border-bottom:none;}
+  .sc-lbl{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;padding:2px 5px;border-radius:3px;text-align:center;}
+  .lbl-bull{background:var(--bull-dim);color:var(--bull);}
+  .lbl-base{background:var(--base-dim);color:var(--base);}
+  .lbl-bear{background:var(--bear-dim);color:var(--bear);}
+  .hcell{text-align:center;}
+  .hcell .p{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;}
+  .hcell .u{font-family:'DM Mono',monospace;font-size:10px;margin-top:1px;}
+  .bc{color:var(--bull);} .nc{color:var(--base);} .rc{color:var(--bear);}
+  .thesis-mini{padding:12px 16px;border-top:1px solid var(--border);}
+  .thesis-mini p{font-size:12px;color:#9ca3af;line-height:1.5;}
+  .risk-tag{display:inline-block;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5;font-size:10px;padding:2px 7px;border-radius:3px;margin-top:5px;font-family:'DM Mono',monospace;}
+
+  /* List view */
+  .list-view{display:none;margin-bottom:24px;}
+  .list-view.active{display:block;}
+  .list-table{width:100%;border-collapse:collapse;}
+  .list-table th{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+  .list-table th.r{text-align:right;}
+  .list-table td{padding:0;border-bottom:1px solid var(--border);vertical-align:top;}
+  .list-row-hdr{display:grid;grid-template-columns:100px 160px 80px 80px 80px 80px 80px 80px 80px 1fr;gap:0;cursor:pointer;align-items:center;}
+  .list-row-hdr:hover{background:var(--surface2);}
+  .list-cell{padding:10px 12px;font-family:'DM Mono',monospace;font-size:12px;}
+  .list-cell.r{text-align:right;}
+  .list-body{overflow:hidden;max-height:500px;background:var(--surface2);transition:max-height .25s ease;}
+  .list-body.collapsed{max-height:0;}
+  .list-detail{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .list-sc-table{width:100%;}
+  .list-sc-table td{padding:4px 8px;font-family:'DM Mono',monospace;font-size:11px;border:none;}
+  .list-thesis{font-size:12px;color:#9ca3af;line-height:1.55;}
+  .list-thesis .risk-tag{margin-top:6px;}
+
+  /* Portfolio tab */
+  .controls{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;align-items:flex-end;}
+  .ctrl-group label{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:6px;}
+  .btn-row{display:flex;gap:6px;}
+  .btn{padding:7px 14px;border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .15s;}
+  .btn:hover{color:var(--text);border-color:var(--border2);}
+  .btn.bull.on{background:var(--bull-dim);border-color:var(--bull-mid);color:var(--bull);}
+  .btn.base.on{background:var(--base-dim);border-color:var(--base-mid);color:var(--base);}
+  .btn.bear.on{background:var(--bear-dim);border-color:#dc2626;color:var(--bear);}
+  .btn.hor.on{background:var(--accent-dim);border-color:var(--accent);color:#a5b4fc;}
+
+  .num-input{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:7px 10px;width:140px;outline:none;transition:border-color .15s;}
+  .num-input:focus{border-color:var(--accent);}
+  .num-input::placeholder{color:var(--dim);}
+  .hor-custom{display:flex;align-items:center;gap:8px;}
+  .hor-custom input{width:70px;}
+  .hor-custom span{font-size:12px;color:var(--muted);}
+
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+  .stat-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .stat-box label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:'DM Mono',monospace;display:block;margin-bottom:5px;}
+  .stat-box value{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--text);}
+  .stat-box .sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;}
+
+  .ptable-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+  .ptable{width:100%;border-collapse:collapse;font-size:12px;}
+  .ptable th{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:right;padding:8px 10px;border-bottom:1px solid var(--border);}
+  .ptable th:first-child,.ptable td:first-child{text-align:left;}
+  .ptable td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:right;font-family:'DM Mono',monospace;}
+  .ptable tr:last-child td{border-bottom:none;}
+  .ptable .tot td{border-top:2px solid var(--border2);font-weight:500;}
+  .pos{color:var(--bull);} .neg{color:var(--bear);} .neu{color:var(--base);}
+
+  .proj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+  .proj-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .proj-box h4{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+  .proj-line{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .proj-line span:first-child{font-size:12px;}
+  .proj-line span:last-child{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;}
+
+  .dca-note{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--muted);line-height:1.6;}
+  .dca-note strong{color:var(--text);}
+
+  .disclaimer{margin-top:24px;padding:12px 16px;border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.6;font-family:'DM Mono',monospace;}
+
+  /* Methodology */
+  .mbox{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px;}
+  .mbox h3{font-family:'DM Serif Display',serif;font-size:17px;font-weight:400;margin-bottom:10px;}
+  .mbox p{font-size:13px;color:#9ca3af;line-height:1.65;margin-bottom:8px;}
+  .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
+  .mitem{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px;}
+  .mitem h4{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+  .mitem p{font-size:12px;color:var(--muted);margin:0;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Blueprint Portfolio Model</h1>
+  <span>Full Stack — 13 Positions — April 2026</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="show('analysis',this)">Position Analysis</div>
+  <div class="tab" onclick="show('portfolio',this)">Portfolio Model</div>
+  <div class="tab" onclick="show('methodology',this)">Methodology</div>
+</div>
+
+<div class="content">
+
+<!-- ANALYSIS -->
+<div id="analysis" class="section active">
+  <div class="analysis-toolbar">
+    <div class="toolbar-left">
+      <span class="analysis-count">13 positions</span>
+      <button class="collapse-all-btn" onclick="toggleAllCards()">Collapse all</button>
+    </div>
+    <div class="toolbar-right">
+      <div class="view-btn on" id="cardViewBtn" onclick="setView('card')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5" height="5" rx="1"/><rect x="7" y="0" width="5" height="5" rx="1"/><rect x="0" y="7" width="5" height="5" rx="1"/><rect x="7" y="7" width="5" height="5" rx="1"/></svg>
+        Cards
+      </div>
+      <div class="view-btn" id="listViewBtn" onclick="setView('list')">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="12" height="2" rx="1"/><rect x="0" y="5" width="12" height="2" rx="1"/><rect x="0" y="10" width="12" height="2" rx="1"/></svg>
+        List
+      </div>
+    </div>
+  </div>
+  <div id="cardViewContainer">
+    <div class="company-grid" id="cgrid"></div>
+  </div>
+  <div class="list-view" id="listViewContainer">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <table class="list-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Name</th>
+            <th class="r">Alloc</th>
+            <th class="r">Price</th>
+            <th class="r">Bull 5yr</th>
+            <th class="r">Base 5yr</th>
+            <th class="r">Bear 5yr</th>
+            <th class="r">Bull 10yr</th>
+            <th class="r">Base 10yr</th>
+            <th class="r">Bear 10yr</th>
+          </tr>
+        </thead>
+        <tbody id="listbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PORTFOLIO -->
+<div id="portfolio" class="section">
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <label>Scenario</label>
+      <div class="btn-row">
+        <div class="btn bull on" onclick="setSc('bull',this)">Bull</div>
+        <div class="btn base" onclick="setSc('base',this)">Base</div>
+        <div class="btn bear" onclick="setSc('bear',this)">Bear</div>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <label>Projection Horizon (years)</label>
+      <div class="hor-custom">
+        <input type="number" class="num-input" id="horInput" value="10" min="1" max="30" placeholder="10" oninput="setHorCustom()">
+        <span>years out</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <label>Annual DCA Contribution</label>
+      <input type="number" class="num-input" id="dcaInput" value="7644" min="0" max="500000" placeholder="7644" oninput="updateDCA()">
+    </div>
+    <div class="ctrl-group">
+      <label>Starting Portfolio Value</label>
+      <input type="number" class="num-input" id="portInput" value="16878" min="0" placeholder="16878" oninput="updatePort()">
+    </div>
+    <div class="ctrl-group">
+      <label>Annual Contribution Growth</label>
+      <div class="hor-custom">
+        <input type="number" class="num-input" id="dcaGrowthInput" value="0" min="0" max="50" placeholder="0" oninput="updateDCA()" style="width:80px;">
+        <span>% per year</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dca-note">
+    <strong>How DCA is modeled:</strong> Annual contribution distributed proportionally by target allocation, compounded at each position's implied scenario return (mid-year entry assumed). Starting portfolio compounds separately. <strong>Contribution growth %</strong> compounds your annual DCA — e.g. 10% models income growing your contributions 10%/yr. <strong>Any horizon</strong> works — the model interpolates between the 3/5/10yr scenario prices using compound annual rate. Try 7, 15, or 20 years.
+  </div>
+
+  <div class="stats-grid" id="statsGrid"></div>
+
+  <div class="ptable-wrap">
+    <table class="ptable">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Alloc</th>
+          <th>Price Now</th>
+          <th>Price Target</th>
+          <th>Return</th>
+          <th>Starting $</th>
+          <th>Projected (price)</th>
+          <th>+ DCA Value</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="ptbody"></tbody>
+    </table>
+  </div>
+
+  <div class="proj-grid" id="projGrid"></div>
+
+  <div class="disclaimer">
+    ⚠ Model is for educational and planning purposes only. Not financial advice. Price targets derived from fundamental extrapolation — actual results will differ materially. DCA modeling assumes consistent contributions and does not account for taxes, transaction costs, or sequence-of-returns risk. Bear case ≠ worst case.
+  </div>
+</div>
+
+<!-- METHODOLOGY -->
+<div id="methodology" class="section">
+  <div class="mbox">
+    <h3>Framework: Fundamental Scenario Analysis</h3>
+    <p>Each position is modeled using three internally consistent scenarios. Unlike Monte Carlo (which uses historical price volatility) or analyst consensus (which extrapolates near-term estimates), this approach changes multiple business drivers simultaneously to tell coherent stories about alternative futures.</p>
+    <p>Every scenario changes all three drivers together — a bear case isn't just a lower price target, it's a coherent story where growth slows, margins compress, and the market re-rates the multiple. This produces more defensible and actionable price targets than single-variable sensitivity analysis.</p>
+    <div class="mgrid">
+      <div class="mitem"><h4>Driver 1 — Revenue CAGR</h4><p>Derived from current growth rate, TAM size, competitive position, and historical precedent at similar scale. Not extrapolated from analyst estimates.</p></div>
+      <div class="mitem"><h4>Driver 2 — FCF Margin</h4><p>Where free cash flow margins go as the business scales. Capital-light models expand naturally; capex-heavy cycles show compression then recovery.</p></div>
+      <div class="mitem"><h4>Driver 3 — Exit Multiple</h4><p>P/FCF the market pays at horizon end. Verified against each company's historical average range. Bull = expansion; Bear = compression.</p></div>
+    </div>
+  </div>
+  <div class="mbox">
+    <h3>Macro Treatment</h3>
+    <p><strong style="color:var(--text)">Base case:</strong> Neutral macro. No recession, stable rates, continued AI capex cycle. Company performance at current trajectory.</p>
+    <p><strong style="color:var(--text)">Bull case:</strong> Favorable macro. Soft landing holds, AI investment accelerates, no major regulatory disruption. Companies capture TAM faster.</p>
+    <p><strong style="color:var(--text)">Bear case:</strong> Mild macro headwind. 12-18 month slowdown, enterprise spending caution, multiple compression. Thesis intact but execution delayed ~18-24 months. NOT a recession scenario.</p>
+  </div>
+  <div class="mbox">
+    <h3>DCA Model</h3>
+    <p>Annual contributions are distributed proportionally by target allocation weight and compounded at each position's scenario-implied annual return rate. Mid-year entry is assumed for conservatism (half-year compounding in year 1). Starting portfolio compounds separately from new contributions.</p>
+    <p>The DCA slider reflects your actual current program ($294/biweekly = $7,644/yr). Use it to model what happens if you increase contributions as income grows — e.g., sliding to $15,000/yr models doubling your DCA.</p>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+const prices = {
+  AMZN:241, NVDA:189, META:638, GOOGL:323, TSLA:359,
+  NOW:95, INTU:370, AMD:249, VST:160, SMH:449,
+  VOO:632, HOOD:74, NBIS:159
+};
+
+const cos = [
+  {t:'AMZN',n:'Amazon.com',a:16,funds:['$717B','+12%','$11B*','1.6%*','11.2%','~49%'],
+   note:'*FCF compressed by $132B capex',
+   thesis:'AWS ($129B rev, +20% YoY, 35% margins) is the primary engine. FCF temporarily suppressed by $200B capex guided for 2026. Bet: capex today = pricing power and margin expansion in 2027-2029. AI inference runs on AWS.',
+   risk:'Capex ROIC disappoints; cloud growth decelerates below 15%',
+   sc:{bull:{p:[320,520,1100]},base:{p:[270,390,720]},bear:{p:[200,270,440]}}},
+
+  {t:'NVDA',n:'NVIDIA Corporation',a:8,funds:['$216B','+65%','$36B OCF','~30%','~55%','73-75%'],
+   note:'Data center = 91% of revenue',
+   thesis:'Every major AI model runs on NVDA hardware. CUDA ecosystem has a 20-year head start. Revenue $216B growing 65%. Blackwell architecture ramping. Hyperscaler capex cycles still early innings.',
+   risk:'Custom silicon captures 30%+ training; China export restrictions limit TAM',
+   sc:{bull:{p:[380,680,1800]},base:{p:[270,440,980]},bear:{p:[180,240,440]}}},
+
+  {t:'META',n:'Meta Platforms',a:8,funds:['$201B','+22%','$43.6B','21.7%','41%','~82%'],
+   note:'3.43B DAP; WhatsApp $2B ARR',
+   thesis:'Most capital-efficient large-cap AI compounder. $201B rev, $43.6B FCF, 41% op margin, 3.43B daily active people. Llama open-source moat. WhatsApp monetization crossing $2B ARR. PEG below 1.',
+   risk:'Regulatory breakup of Instagram/WhatsApp; user attrition to younger platforms',
+   sc:{bull:{p:[940,1600,3800]},base:{p:[720,1050,2200]},bear:{p:[460,580,1100]}}},
+
+  {t:'GOOGL',n:'Alphabet Inc.',a:10,funds:['$400B+','+14%','~$70B','~17%','31.6%','~57%'],
+   note:'Cloud +48% Q4; YouTube >$60B/yr',
+   thesis:'Most undervalued mega-cap at ~18x forward earnings. Revenue crossed $400B first time. Cloud growing 48% Q4 with margins expanding to 24%. Gemini is Apple\'s default AI. Waymo optionality unpriced.',
+   risk:'DOJ antitrust forces search monetization changes; OpenAI erodes search share',
+   sc:{bull:{p:[520,860,2000]},base:{p:[390,580,1200]},bear:{p:[260,320,560]}}},
+
+  {t:'TSLA',n:'Tesla Inc.',a:11,funds:['$94.8B','-3%','$6.2B','6.5%','2-6%','16-18%'],
+   note:'Energy +81% YoY; Robotaxi live June 2025',
+   thesis:'Binary bet on physical AI. Automotive is the financing vehicle. Energy storage growing 80%+ YoY. Robotaxi live in Austin/Bay Area. Cybercab production started April 2026. 10yr bull: autonomous driving + Optimus at scale.',
+   risk:'Cybercab fails commercial scale; Waymo outcompetes; automotive margin stays compressed',
+   sc:{bull:{p:[700,1400,4500]},base:{p:[420,620,1400]},bear:{p:[180,210,320]}}},
+
+  {t:'NOW',n:'ServiceNow Inc.',a:7,funds:['$13.3B','+21%','$4.6B','35%','31%','~83%'],
+   note:'RPO $24.3B; zero long-term debt',
+   thesis:'Operating system enterprises run workflows on. $13.3B revenue +21%, $4.6B FCF +34%, $24.3B backlog, zero debt, 83% subscription gross margins. Now Assist AI on track for $1B ACV by 2026. Switching costs are among the highest in enterprise software.',
+   risk:'NRR drops below 115%; enterprise AI disrupts workflow automation demand',
+   sc:{bull:{p:[160,280,720]},base:{p:[120,195,440]},bear:{p:[75,95,200]}}},
+
+  {t:'INTU',n:'Intuit Inc.',a:5,funds:['$18.8B','+16%','$6.1B','32%','~41%','~82%'],
+   note:'QBO +22%; FY26 guided +12-13%',
+   thesis:'$6.1B FCF on $84M capex = capital-light perfection. QuickBooks 7M+ SMB subscribers with near-zero churn. TurboTax 40%+ US tax filing market. Down 51% from highs on AI disruption fears that ignore Intuit IS building the AI tools. Anthropic partnership for SMB AI.',
+   risk:'AI-native accounting tools erode QuickBooks market share; TurboTax free-file expansion',
+   sc:{bull:{p:[560,900,2200]},base:{p:[420,640,1400]},bear:{p:[270,320,600]}}},
+
+  {t:'AMD',n:'Advanced Micro Devices',a:8,funds:['$34.6B','+34%','$7.8B non-GAAP','~22%','~22%','~52%'],
+   note:'Data center $16.6B +32%; Meta $60B deal',
+   thesis:'Data center revenue $16.6B +32% YoY. Meta $60B infrastructure commitment validates AMD as genuine NVDA alternative. OpenAI partnership. MI350/MI400 roadmap targeting 80%+ CAGR in AI revenue. PEG 0.78 — cheapest large-cap chip stock on growth-adjusted basis.',
+   risk:'CUDA ecosystem moat persists; ROCm fails to achieve software parity',
+   sc:{bull:{p:[480,820,2200]},base:{p:[340,540,1300]},bear:{p:[160,200,380]}}},
+
+  {t:'SMH',n:'VanEck Semiconductor ETF',a:8,funds:['ETF','27.5% avg ret','N/A','0.35% ER','N/A','N/A'],
+   note:'NVDA 18%, TSM 11%, AVGO 8%, ASML 5%',
+   thesis:'25 largest semiconductor companies in one vehicle. Holds NVDA (18%), TSM (11%), AVGO (8%), ASML (5%), AMD (5%). Provides chip thesis diversification without single-stock risk. Acts as de-risked version of the semiconductor thesis with built-in TSMC and ASML exposure.',
+   risk:'Concentrated in AI capex cycle; any pullback in semiconductor spending hits entire basket',
+   sc:{bull:{p:[720,1200,3200]},base:{p:[540,840,1900]},bear:{p:[300,380,760]}}},
+
+  {t:'VST',n:'Vistra Corp.',a:4,funds:['~$16B rev','AI-driven','$3.6B FCF','~$5.9B EBITDA','N/A','N/A'],
+   note:'6.4GW nuclear; 2026 EBITDA $6.8-7.6B',
+   thesis:'41GW fleet — nuclear baseload + flexible gas + battery storage — uniquely positioned for AI data center power demand. $3.6B FCF, $5.9B EBITDA 2025. 2026 guidance $6.8-7.6B EBITDA. Nuclear PTCs from IRA provide earnings floor. Data centers require 24/7 power that renewables alone cannot supply.',
+   risk:'AI capex compression; power demand overestimated; nuclear regulatory risk',
+   sc:{bull:{p:[280,440,900]},base:{p:[200,300,580]},bear:{p:[110,135,240]}}},
+
+  {t:'VOO',n:'Vanguard S&P 500 ETF',a:10,funds:['S&P 500','~10% hist.','N/A','0.03% ER','N/A','N/A'],
+   note:'Market floor; 500 US large-caps',
+   thesis:'Non-negotiable market anchor. Provides baseline compounding floor regardless of individual stock thesis outcomes. Historical 10% CAGR across 30+ year periods. Not a conviction bet — a structural necessity.',
+   risk:'Prolonged bear market; structural index concentration in mega-cap tech',
+   sc:{bull:{p:[840,1300,3200]},base:{p:[720,1050,2400]},bear:{p:[530,700,1400]}}},
+
+  {t:'HOOD',n:'Robinhood Markets',a:2,funds:['$4.5B','+52%','Profitable','Growing','~30% adj','N/A'],
+   note:'11 business lines >$100M ARR each',
+   thesis:'Revenue $4.5B +52% YoY. 11 business lines each generating $100M+ annualized. Net deposits $20B/quarter. 3.9M Gold subscribers. Bitstamp acquisition expands crypto globally. Prediction markets launched. Still early in its monetization curve relative to assets under custody.',
+   risk:'PFOF regulatory risk; crypto bear market cuts transaction revenue; market downturn hits trading volumes',
+   sc:{bull:{p:[140,240,620]},base:{p:[100,160,380]},bear:{p:[45,60,120]}}},
+
+  {t:'NBIS',n:'Nebius Group',a:3,funds:['$530M','351% YoY','Pre-scale','Neg→Pos 2H26','~35%','N/A'],
+   note:'ARR $1.25B; $3-3.4B guided 2026; MSFT $17.4B deal',
+   thesis:'Pure-play neo-cloud GPU infrastructure. Revenue $530M +351% YoY. Microsoft $17.4B + Meta $3B five-year deals. Sold out all available capacity. $7-9B ARR target end of 2026. 2GW+ contracted power. If it executes, 2027 revenue could exceed $10B from near zero in 2024.',
+   risk:'$16-20B 2026 capex plan execution; GPU supply dependency on NVDA; EBITDA still negative until H2 2026',
+   sc:{bull:{p:[380,680,2200]},base:{p:[220,380,900]},bear:{p:[80,100,200]}}},
+];
+
+let sc='bull', hor=10, annualDCA=7644, startPort=16878, dcaGrowth=0;
+
+// Interpolate price for any horizon using CAGR between known anchor points [0,3,5,10yr]
+function interpolatePrice(ticker, scenario, years){
+  const c=cos.find(x=>x.t===ticker);
+  const curr=prices[ticker];
+  const pts=[{y:0,p:curr},{y:3,p:c.sc[scenario].p[0]},{y:5,p:c.sc[scenario].p[1]},{y:10,p:c.sc[scenario].p[2]}];
+  if(years<=0) return curr;
+  if(years>=10){
+    // Extrapolate beyond 10yr using 10yr CAGR
+    const cagr10=Math.pow(pts[3].p/curr,1/10)-1;
+    return pts[3].p*Math.pow(1+cagr10,years-10);
+  }
+  let lo=pts[0],hi2=pts[1];
+  for(let i=0;i<pts.length-1;i++){
+    if(years>=pts[i].y && years<=pts[i+1].y){lo=pts[i];hi2=pts[i+1];break;}
+  }
+  if(hi2.y===lo.y) return lo.p;
+  const cagr=Math.pow(hi2.p/lo.p,1/(hi2.y-lo.y))-1;
+  return lo.p*Math.pow(1+cagr,years-lo.y);
+}
+
+function annualReturn(ticker, scenario, years){
+  const curr=prices[ticker];
+  const target=interpolatePrice(ticker,scenario,years);
+  return years>0?Math.pow(target/curr,1/years)-1:0;
+}
+
+function show(id,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+function setSc(s,el){
+  sc=s;
+  document.querySelectorAll('.btn.bull,.btn.base,.btn.bear').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  renderPortfolio();
+}
+
+function setHorCustom(){
+  const v=parseFloat(document.getElementById('horInput').value);
+  if(!isNaN(v)&&v>0&&v<=50){hor=v;renderPortfolio();}
+}
+
+function updateDCA(){
+  const v=parseFloat(document.getElementById('dcaInput').value);
+  const g=parseFloat(document.getElementById('dcaGrowthInput').value)||0;
+  if(!isNaN(v)&&v>=0) annualDCA=v;
+  if(!isNaN(g)&&g>=0) dcaGrowth=g/100;
+  renderPortfolio();
+}
+
+function updatePort(){
+  const v=parseFloat(document.getElementById('portInput').value);
+  if(!isNaN(v)&&v>=0){startPort=v;renderPortfolio();}
+}
+
+// FV of growing annuity with mid-year timing and contribution growth rate
+function dcaFV(baseContrib, posReturn, years, growthRate){
+  let fv=0;
+  for(let y=1;y<=years;y++){
+    const contrib=baseContrib*Math.pow(1+growthRate,y-1);
+    fv+=contrib*Math.pow(1+posReturn,years-y+0.5);
+  }
+  return fv;
+}
+
+let viewMode='card';
+let allCollapsed=false;
+
+function setView(mode){
+  viewMode=mode;
+  document.getElementById('cardViewContainer').style.display=mode==='card'?'block':'none';
+  const lv=document.getElementById('listViewContainer');
+  lv.classList.toggle('active',mode==='list');
+  document.getElementById('cardViewBtn').classList.toggle('on',mode==='card');
+  document.getElementById('listViewBtn').classList.toggle('on',mode==='list');
+  if(mode==='list'){
+    renderList();
+    // Sync collapsed state to list rows after render
+    cos.forEach((_,i)=>{
+      const lbody=document.getElementById('lbody-'+i);
+      const lchev=document.getElementById('lchev-'+i);
+      if(lbody) lbody.classList.toggle('collapsed',allCollapsed);
+      if(lchev) lchev.classList.toggle('open',!allCollapsed);
+    });
+  } else {
+    // Sync collapsed state back to card rows
+    cos.forEach((_,i)=>{
+      const cbody=document.getElementById('cbody-'+i);
+      const cchev=document.getElementById('chev-'+i);
+      if(cbody) cbody.classList.toggle('collapsed',allCollapsed);
+      if(cchev) cchev.classList.toggle('open',!allCollapsed);
+    });
+  }
+}
+
+function toggleCard(idx){
+  const body=document.getElementById('cbody-'+idx);
+  const chev=document.getElementById('chev-'+idx);
+  if(!body) return;
+  body.classList.toggle('collapsed');
+  chev.classList.toggle('open');
+}
+
+function toggleAllCards(){
+  allCollapsed=!allCollapsed;
+  cos.forEach((_,i)=>{
+    // Card view elements
+    const cbody=document.getElementById('cbody-'+i);
+    const cchev=document.getElementById('chev-'+i);
+    if(cbody) cbody.classList.toggle('collapsed',allCollapsed);
+    if(cchev) cchev.classList.toggle('open',!allCollapsed);
+    // List view elements
+    const lbody=document.getElementById('lbody-'+i);
+    const lchev=document.getElementById('lchev-'+i);
+    if(lbody) lbody.classList.toggle('collapsed',allCollapsed);
+    if(lchev) lchev.classList.toggle('open',!allCollapsed);
+  });
+  document.querySelector('.collapse-all-btn').textContent=allCollapsed?'Expand all':'Collapse all';
+}
+
+function renderCards(){
+  const grid=document.getElementById('cgrid');
+  const fLabels=['Revenue','Rev Gr','FCF','FCF Mg','Op Mg','Gr Mg'];
+  grid.innerHTML=cos.map((c,idx)=>{
+    const scens=['bull','base','bear'];
+    const curr=prices[c.t];
+    const rows=scens.map(s=>{
+      const cc=s==='bull'?'bc':s==='base'?'nc':'rc';
+      const lc=`lbl-${s}`;
+      return `<div class="sc-row">
+        <div class="sc-lbl ${lc}">${s.toUpperCase()}</div>
+        ${c.sc[s].p.map(p=>{
+          const u=((p/curr-1)*100).toFixed(0);
+          const sign=u>=0?'+':'';
+          return `<div class="hcell"><div class="p ${cc}">$${p}</div><div class="u ${cc}">${sign}${u}%</div></div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+    return `<div class="ccard">
+      <div class="ccard-hdr" onclick="toggleCard(${idx})">
+        <div class="hdr-left">
+          <div><div class="ticker">${c.t}</div><div class="cname">${c.n}</div></div>
+        </div>
+        <div class="hdr-right">
+          <div class="alloc-badge">${c.a}%</div>
+          <span class="chevron open" id="chev-${idx}">▾</span>
+        </div>
+      </div>
+      <div class="ccard-body" id="cbody-${idx}">
+        <div class="funds">
+          ${c.funds.map((v,i)=>`<div class="fi"><label>${fLabels[i]}</label><value>${v}</value></div>`).join('')}
+        </div>
+        <div class="scens">
+          <div class="sc-hdrs"><span></span><span>3yr</span><span>5yr</span><span>10yr</span></div>
+          ${rows}
+        </div>
+        <div class="thesis-mini">
+          <p>${c.thesis.substring(0,200)}...</p>
+          <div class="risk-tag">⚠ ${c.risk}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderList(){
+  document.getElementById('listbody').innerHTML=cos.map((c,idx)=>{
+    const curr=prices[c.t];
+    const b5=c.sc.bull.p[1],n5=c.sc.base.p[1],r5=c.sc.bear.p[1];
+    const b10=c.sc.bull.p[2],n10=c.sc.base.p[2],r10=c.sc.bear.p[2];
+    const pct=(p)=>{const u=((p/curr-1)*100).toFixed(0);return (u>=0?'+':'')+u+'%';};
+    const detailRows=['bull','base','bear'].map(s=>{
+      const cc=s==='bull'?'var(--bull)':s==='base'?'var(--base)':'var(--bear)';
+      return `<tr>${['',s.toUpperCase(),...c.sc[s].p.map(p=>`$${p} (${pct(p)})`)].map((v,i)=>
+        `<td style="color:${i>0?cc:'var(--muted)'};padding:3px 8px;font-family:'DM Mono',monospace;font-size:11px;${i>1?'text-align:right':''}">${v}</td>`
+      ).join('')}</tr>`;
+    }).join('');
+    return `<tr>
+      <td>
+        <div style="cursor:pointer;display:grid;grid-template-columns:85px 145px 55px 65px 80px 80px 80px 80px 80px 80px;align-items:center;padding:2px 0;" onclick="toggleListRow(${idx})">
+          <div class="list-cell" style="display:flex;align-items:center;gap:5px;">
+            <span class="chevron open" id="lchev-${idx}" style="font-size:11px;color:var(--muted);">▾</span>
+            <strong style="font-family:'DM Mono',monospace;font-size:13px;">${c.t}</strong>
+          </div>
+          <div class="list-cell" style="font-size:11px;color:var(--muted);">${c.n}</div>
+          <div class="list-cell r" style="color:#a5b4fc;">${c.a}%</div>
+          <div class="list-cell r" style="color:var(--text);">$${curr}</div>
+          <div class="list-cell r bc">$${b5}</div>
+          <div class="list-cell r nc">$${n5}</div>
+          <div class="list-cell r rc">$${r5}</div>
+          <div class="list-cell r bc">$${b10}</div>
+          <div class="list-cell r nc">$${n10}</div>
+          <div class="list-cell r rc">$${r10}</div>
+        </div>
+        <div class="list-body" id="lbody-${idx}">
+          <div class="list-detail">
+            <div>
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;">All scenarios</div>
+              <table style="border-collapse:collapse;">
+                <tr>${['','Scenario','3yr','5yr','10yr'].map(h=>`<td style="padding:2px 8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);${h&&h!=='Scenario'?'text-align:right':''}">${h}</td>`).join('')}</tr>
+                ${detailRows}
+              </table>
+            </div>
+            <div>
+              <div style="font-size:12px;color:#9ca3af;line-height:1.55;">${c.thesis.substring(0,220)}...</div>
+              <div class="risk-tag" style="margin-top:6px;">⚠ ${c.risk}</div>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleListRow(idx){
+  const body=document.getElementById('lbody-'+idx);
+  const chev=document.getElementById('lchev-'+idx);
+  if(!body) return;
+  body.classList.toggle('collapsed');
+  chev.classList.toggle('open');
+}
+
+function renderPortfolio(){
+  const cc=sc==='bull'?'pos':sc==='base'?'neu':'neg';
+  let totStart=0, totProj=0, totDca=0, totTotal=0;
+
+  const rows=cos.map(c=>{
+    const curr=prices[c.t];
+    const target=interpolatePrice(c.t,sc,hor);
+    const ret=((target/curr-1)*100).toFixed(1);
+    const sign=parseFloat(ret)>=0?'+':'';
+    const posAlloc=c.a/100;
+    const startVal=startPort*posAlloc;
+    const projFromStart=startVal*(target/curr);
+    const ar=annualReturn(c.t,sc,hor);
+    const dcaForPos=annualDCA*posAlloc;
+    const dcaVal=dcaFV(dcaForPos,ar,hor,dcaGrowth);
+    const total=projFromStart+dcaVal;
+    totStart+=startVal; totProj+=projFromStart; totDca+=dcaVal; totTotal+=total;
+    return `<tr>
+      <td style="color:var(--text);font-weight:500;">${c.t}</td>
+      <td>${c.a}%</td>
+      <td>$${curr}</td>
+      <td class="${cc}">$${Math.round(target).toLocaleString()}</td>
+      <td class="${cc}">${sign}${ret}%</td>
+      <td>$${Math.round(startVal).toLocaleString()}</td>
+      <td class="${cc}">$${Math.round(projFromStart).toLocaleString()}</td>
+      <td class="${cc}">+$${Math.round(dcaVal).toLocaleString()}</td>
+      <td class="${cc}" style="font-weight:500;">$${Math.round(total).toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  const totRet=((totTotal/totStart-1)*100).toFixed(1);
+  const totSign=parseFloat(totRet)>=0?'+':'';
+  // Total DCA invested accounting for growth
+  let totalDcaInvested=0;
+  for(let y=1;y<=hor;y++) totalDcaInvested+=annualDCA*Math.pow(1+dcaGrowth,y-1);
+  const multiple=(totTotal/startPort).toFixed(1);
+
+  document.getElementById('ptbody').innerHTML = rows + `<tr class="tot">
+    <td>TOTAL</td><td>100%</td><td>—</td><td>—</td>
+    <td class="${cc}">${totSign}${totRet}%</td>
+    <td>$${Math.round(totStart).toLocaleString()}</td>
+    <td class="${cc}">$${Math.round(totProj).toLocaleString()}</td>
+    <td class="${cc}">+$${Math.round(totDca).toLocaleString()}</td>
+    <td class="${cc}" style="font-weight:500;">$${Math.round(totTotal).toLocaleString()}</td>
+  </tr>`;
+
+  document.getElementById('statsGrid').innerHTML=[
+    ['Starting Value','$'+Math.round(startPort).toLocaleString(),'Current portfolio'],
+    ['Total DCA Invested','$'+Math.round(totalDcaInvested).toLocaleString(),dcaGrowth>0?`Growing ${(dcaGrowth*100).toFixed(0)}%/yr`:`$${Math.round(annualDCA/12).toLocaleString()}/mo`],
+    ['Projected Total','$'+Math.round(totTotal).toLocaleString(),`${sc} case, ${Math.round(hor*10)/10}yr`],
+    ['Portfolio Multiple',multiple+'×','vs starting value'],
+  ].map(([l,v,s])=>`<div class="stat-box"><label>${l}</label><value>${v}</value><div class="sub">${s}</div></div>`).join('');
+
+  // Projections grid — 3/5/10 + custom horizon
+  const snapHors = hor!==3&&hor!==5&&hor!==10 ? [3,5,10,Math.round(hor*10)/10] : [3,5,10];
+  const combos=[{s:'bull',label:'Bull'},{s:'base',label:'Base'},{s:'bear',label:'Bear'}];
+  document.getElementById('projGrid').innerHTML=snapHors.map(h=>{
+    const vals=combos.map(({s,label})=>{
+      let tot=0;
+      cos.forEach(c=>{
+        const posAlloc=c.a/100;
+        const sv=startPort*posAlloc;
+        const tgt=interpolatePrice(c.t,s,h);
+        const ar2=annualReturn(c.t,s,h);
+        const dv=dcaFV(annualDCA*posAlloc,ar2,h,dcaGrowth);
+        tot+=sv*(tgt/prices[c.t])+dv;
+      });
+      const clr=s==='bull'?'var(--bull)':s==='base'?'var(--base)':'var(--bear)';
+      return {label,val:tot,clr};
+    });
+    let inv=0; for(let y=1;y<=h;y++) inv+=annualDCA*Math.pow(1+dcaGrowth,y-1);
+    return `<div class="proj-box">
+      <h4>${h}-Year Projection (incl. DCA)</h4>
+      ${vals.map(v=>`<div class="proj-line">
+        <span style="color:${v.clr}">${v.label}</span>
+        <span style="color:${v.clr}">$${Math.round(v.val).toLocaleString()}</span>
+      </div>`).join('')}
+      <div style="font-size:11px;color:var(--dim);margin-top:6px;font-family:'DM Mono',monospace;">
+        Total invested: $${Math.round(startPort+inv).toLocaleString()}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+renderCards();
+renderPortfolio();
+</script>
+</body>
+</html>

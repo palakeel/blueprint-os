@@ -7,7 +7,7 @@ import { EditPositionForm }    from '../components/forms/EditPositionForm'
 import { supabase }            from '../lib/supabase'
 import { formatMoney }         from '../lib/formatters'
 import { Private }             from '../components/ui/Private'
-import { CheckCircle, Clock, RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus } from 'lucide-react'
+import { CheckCircle, Clock, RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, BarChart2 } from 'lucide-react'
 
 function getDCAPeriod() {
   const now    = new Date()
@@ -155,6 +155,11 @@ export function Portfolio() {
             <button onClick={fetchPrices} className="text-xs px-2 py-1 rounded border"
               style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }}>Retry</button>
           )}
+          <a href="/portfolio-model.html" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
+            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+            <BarChart2 size={13} /> Model
+          </a>
           <button onClick={() => { setPanel('trade'); setEditingPos(null) }}
             className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
             style={{ backgroundColor: 'var(--accent-cyan)', color: '#0a0e1a' }}>
