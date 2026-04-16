@@ -14,14 +14,14 @@ export default async function handler(req, res) {
   if (!ticker) return res.status(400).json({ error: 'ticker param required' })
 
   const sym = ticker.toUpperCase().trim()
-  const base = 'https://financialmodelingprep.com/api/v3'
+  const base = 'https://financialmodelingprep.com/stable'
 
   try {
     const [profileRes, metricsRes, incomeRes, cashRes] = await Promise.all([
-      fetch(`${base}/profile/${sym}?apikey=${key}`),
-      fetch(`${base}/key-metrics-ttm/${sym}?apikey=${key}`),
-      fetch(`${base}/income-statement/${sym}?limit=2&apikey=${key}`),
-      fetch(`${base}/cash-flow-statement/${sym}?limit=1&apikey=${key}`),
+      fetch(`${base}/profile?symbol=${sym}&apikey=${key}`),
+      fetch(`${base}/key-metrics-ttm?symbol=${sym}&apikey=${key}`),
+      fetch(`${base}/income-statement?symbol=${sym}&limit=2&apikey=${key}`),
+      fetch(`${base}/cash-flow-statement?symbol=${sym}&limit=1&apikey=${key}`),
     ])
 
     const [profileData, metricsData, incomeData, cashData] = await Promise.all([
@@ -54,6 +54,10 @@ export default async function handler(req, res) {
     const grossMargin = income0 && income0.revenue > 0
       ? (income0.grossProfit / income0.revenue) * 100 : null
 
+    // Derive PE and PFCF from yield fields (new stable API dropped ratio fields)
+    const peRatio   = metrics?.earningsYieldTTM   > 0 ? 1 / metrics.earningsYieldTTM   : null
+    const pfcfRatio = metrics?.freeCashFlowYieldTTM > 0 ? 1 / metrics.freeCashFlowYieldTTM : null
+
     return res.status(200).json({
       ticker: sym,
       companyName: profile.companyName,
@@ -61,7 +65,7 @@ export default async function handler(req, res) {
       sector: profile.sector,
       industry: profile.industry,
       price: profile.price,
-      mktCap: profile.mktCap,
+      mktCap: profile.marketCap,
       // Formatted for display
       revenue:     revNow,
       revenueGrowth: revGrowth,
@@ -69,8 +73,8 @@ export default async function handler(req, res) {
       fcfMargin,
       opMargin,
       grossMargin,
-      peRatio:   metrics?.peRatioTTM ?? null,
-      pfcfRatio: metrics?.pfcfRatioTTM ?? null,
+      peRatio,
+      pfcfRatio,
     })
   } catch (err) {
     console.error('FMP error:', err)
