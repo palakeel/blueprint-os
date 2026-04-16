@@ -1,35 +1,41 @@
 // POST /api/model/analyze
-// Body: { ticker, companyName, price, fundamentals: { revenue, revenueGrowth, fcf, fcfMargin, opMargin, grossMargin, mktCap, sector, description } }
-// Returns: { ticker, companyName, analysis: { thesis, risk, note, funds, sc } }
+// Body: { ticker, price? }
+// Claude recalls financials from training knowledge + applies 3-driver methodology.
+// No external data dependency — works for any publicly listed stock.
 
 const METHODOLOGY = `
 You are a fundamental analyst performing scenario analysis using a specific 3-driver framework.
 
+## Your Job
+1. Recall the most recent available financial data for the given ticker from your training knowledge.
+2. Apply the 3-driver scenario framework to generate price targets.
+
 ## The Framework
 Each scenario (Bull / Base / Bear) simultaneously changes three drivers:
-1. Revenue CAGR — derived from current growth rate, TAM, competitive position, historical precedents at similar scale
-2. FCF Margin — how free cash flow margins evolve as the business scales (capital-light = natural expansion; capex-heavy = compression then recovery)
-3. Exit Multiple — the P/FCF multiple the market pays at the horizon end (Bull = expansion vs today; Bear = compression)
+1. Revenue CAGR — derived from current growth rate, TAM, competitive position, historical precedents
+2. FCF Margin — how free cash flow margins evolve as the business scales
+3. Exit Multiple — the P/FCF multiple the market pays at the horizon end
 
 ## Scenario Definitions
 - Bull: favorable macro, faster TAM capture, margin expansion, multiple expansion. Optimistic but grounded.
 - Base: current trajectory, neutral macro, no major disruptions, company executes near current run rate.
-- Bear: mild headwind — 12-18 month execution delay, enterprise caution, multiple compression. Thesis intact but delayed. NOT a recession scenario, NOT a worst case.
+- Bear: mild headwind — 12-18 month execution delay, caution, multiple compression. Thesis intact but delayed. NOT a worst case.
 
 ## Price Target Methodology
-Starting from current price, derive implied price at 3yr, 5yr, and 10yr by:
+Starting from current price, derive implied price at 3yr, 5yr, 10yr by:
 1. Projecting revenue at scenario CAGR
 2. Applying scenario FCF margin to get FCF
 3. Multiplying by scenario exit P/FCF multiple
-This gives a fundamental value; adjust for share count changes if relevant.
 
 ## Output Format
 Return ONLY valid JSON — no markdown, no explanation, just the object:
 {
+  "companyName": "Full legal company name",
+  "sector": "Sector (e.g. Technology, Energy, Healthcare)",
+  "funds": ["$XB rev", "+Y% YoY", "$ZB FCF", "W% FCF mg", "X% op mg", "Y% gr mg"],
+  "note": "One short footnote about an important financial nuance, or empty string if none",
   "thesis": "2-3 sentence bull-case investment thesis. What is the primary driver of long-term value?",
   "risk": "Single sentence: the #1 risk that could invalidate the thesis.",
-  "note": "One short footnote about an important financial nuance (e.g. suppressed FCF due to capex, or one-time items).",
-  "funds": ["$XB rev", "+Y% growth", "$ZB FCF", "W% FCF mg", "X% op mg", "Y% gr mg"],
   "sc": {
     "bull": { "p": [price_3yr, price_5yr, price_10yr] },
     "base": { "p": [price_3yr, price_5yr, price_10yr] },
@@ -37,17 +43,10 @@ Return ONLY valid JSON — no markdown, no explanation, just the object:
   }
 }
 
-All prices are integers (round to nearest dollar). Be realistic — bear case should still reflect a functional business.
+All prices are integers (round to nearest dollar). Use N/A in funds array if a metric is unavailable.
+Be realistic — bear case should still reflect a functional business.
+If you don't know the exact financials, use your best estimate based on the company's business model and sector.
 `
-
-function fmt(n, decimals = 0) {
-  if (n == null) return 'N/A'
-  const abs = Math.abs(n)
-  if (abs >= 1e12) return `$${(n / 1e12).toFixed(1)}T`
-  if (abs >= 1e9)  return `$${(n / 1e9).toFixed(1)}B`
-  if (abs >= 1e6)  return `$${(n / 1e6).toFixed(1)}M`
-  return `$${n.toFixed(decimals)}`
-}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -56,24 +55,16 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { ticker, companyName, price, fundamentals } = req.body ?? {}
-  if (!ticker || !price) return res.status(400).json({ error: 'ticker and price required' })
+  const { ticker, price } = req.body ?? {}
+  if (!ticker) return res.status(400).json({ error: 'ticker required' })
 
-  const f = fundamentals ?? {}
+  const priceStr = price > 0 ? `$${price}` : 'unknown (use your best estimate of current price)'
 
-  const userPrompt = `Analyze ${ticker} (${companyName ?? ticker}) for scenario modeling.
+  const userPrompt = `Analyze ${ticker.toUpperCase()} for scenario modeling.
 
-Current price: $${price}
-Market cap: ${fmt(f.mktCap)}
-Sector: ${f.sector ?? 'Unknown'}
+Current market price: ${priceStr}
 
-Financials (TTM):
-  Revenue: ${fmt(f.revenue)} ${f.revenueGrowth != null ? `(+${f.revenueGrowth.toFixed(0)}% YoY)` : ''}
-  Free Cash Flow: ${fmt(f.fcf)} (${f.fcfMargin != null ? f.fcfMargin.toFixed(1) + '% FCF margin' : 'margin N/A'})
-  Operating Margin: ${f.opMargin != null ? f.opMargin.toFixed(1) + '%' : 'N/A'}
-  Gross Margin: ${f.grossMargin != null ? f.grossMargin.toFixed(1) + '%' : 'N/A'}
-
-Business: ${f.description ? f.description.slice(0, 400) : 'No description available.'}`
+Using your training knowledge, recall the most recent available financials for this company, then apply the 3-driver scenario framework to generate 3yr, 5yr, and 10yr price targets for bull, base, and bear cases.`
 
   const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -95,8 +86,8 @@ Business: ${f.description ? f.description.slice(0, 400) : 'No description availa
     return res.status(502).json({ error: 'Claude API failed', details: err })
   }
 
-  const result  = await apiRes.json()
-  const text    = result.content?.[0]?.text ?? '{}'
+  const result = await apiRes.json()
+  const text   = result.content?.[0]?.text ?? '{}'
 
   let analysis
   try {
@@ -106,5 +97,5 @@ Business: ${f.description ? f.description.slice(0, 400) : 'No description availa
     try { analysis = JSON.parse(match?.[0] ?? '{}') } catch { analysis = {} }
   }
 
-  return res.status(200).json({ ticker, companyName: companyName ?? ticker, analysis })
+  return res.status(200).json({ ticker: ticker.toUpperCase(), analysis })
 }

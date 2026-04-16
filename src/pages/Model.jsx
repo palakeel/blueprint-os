@@ -385,44 +385,29 @@ export function Model() {
 
     setLookupLoading(true)
     try {
-      // 1. Get fundamentals from FMP
-      const fmpRes = await fetch(`/api/fmp/fundamentals?ticker=${sym}`)
-      if (!fmpRes.ok) {
-        const err = await fmpRes.json().catch(() => ({}))
-        if (fmpRes.status === 503) throw new Error('FMP API key not configured yet — add FMP_API_KEY to Vercel env vars.')
-        if (fmpRes.status === 404) throw new Error(`Ticker "${sym}" not found on FMP.`)
-        throw new Error(err.error || 'FMP request failed')
-      }
-      const fundamentals = await fmpRes.json()
+      // Live price from Schwab if connected, otherwise Claude estimates it
+      const livePrice = prices[sym] > 0 ? prices[sym] : null
 
-      // 2. Get live price (FMP profile has price too; use Schwab if available)
-      const livePrice = prices[sym] ?? fundamentals.price ?? 0
-
-      // 3. AI scenario analysis
+      // Single Claude call — recalls financials + generates scenarios
       const analyzeRes = await fetch('/api/model/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ticker:      sym,
-          companyName: fundamentals.companyName,
-          price:       livePrice,
-          fundamentals,
-        }),
+        body: JSON.stringify({ ticker: sym, price: livePrice }),
       })
       if (!analyzeRes.ok) throw new Error('AI analysis failed')
       const { analysis } = await analyzeRes.json()
 
       const result = {
-        t:    sym,
-        n:    fundamentals.companyName ?? sym,
-        a:    null,   // no target allocation for lookup stocks
-        funds: analysis.funds ?? [],
-        note:  analysis.note  ?? '',
+        t:      sym,
+        n:      analysis.companyName ?? sym,
+        a:      null,
+        funds:  analysis.funds  ?? [],
+        note:   analysis.note   ?? '',
         thesis: analysis.thesis ?? '',
         risk:   analysis.risk   ?? '',
         sc:     analysis.sc     ?? { bull: { p: [0,0,0] }, base: { p: [0,0,0] }, bear: { p: [0,0,0] } },
-        price: livePrice,
-        sector: fundamentals.sector,
+        price:  livePrice ?? 0,
+        sector: analysis.sector ?? '',
       }
 
       setCache(cacheKey, result)
