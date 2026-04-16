@@ -11,8 +11,8 @@ const NAV_LINKS = [
   { path: '/budget',     label: 'Budget' },
   { path: '/networth',   label: 'Net Worth' },
   { path: '/portfolio',  label: 'Portfolio' },
-  { path: '/milestones', label: 'Milestones' },
   { path: '/model',      label: 'Model' },
+  { path: '/milestones', label: 'Milestones' },
   { path: '/settings',   label: 'Settings' },
 ]
 

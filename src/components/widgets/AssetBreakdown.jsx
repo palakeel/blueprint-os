@@ -5,8 +5,20 @@ import { formatMoney } from '../../lib/formatters'
 import { Private } from '../ui/Private'
 
 export function AssetBreakdown() {
-  const { latestNetWorth } = useData()
-  const raw = latestNetWorth?.accounts ?? {}
+  const { latestNetWorth, portfolio } = useData()
+
+  // Start from the net worth snapshot (for bank/crypto/non-portfolio accounts)
+  const raw = { ...(latestNetWorth?.accounts ?? {}) }
+
+  // Override portfolio-backed accounts with live cost-basis from actual positions
+  // so adds/sells reflect immediately without waiting for a new net worth entry
+  const acctMap = { 'Blueprint': 'Blueprint (Robinhood)', 'Roth IRA': 'Roth IRA', 'Trading': 'Trading Account' }
+  for (const [portAcct, snapshotKey] of Object.entries(acctMap)) {
+    const val = portfolio
+      .filter(p => (p.account ?? 'Blueprint') === portAcct && p.shares > 0)
+      .reduce((s, p) => s + p.shares * p.avg_cost, 0)
+    if (val > 0) raw[snapshotKey] = val
+  }
 
   const data = Object.entries(raw)
     .filter(([, v]) => v > 0)

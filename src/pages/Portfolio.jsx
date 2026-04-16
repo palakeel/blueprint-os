@@ -7,7 +7,7 @@ import { EditPositionForm }    from '../components/forms/EditPositionForm'
 import { supabase }            from '../lib/supabase'
 import { formatMoney }         from '../lib/formatters'
 import { Private }             from '../components/ui/Private'
-import { CheckCircle, Clock, RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, BarChart2 } from 'lucide-react'
+import { CheckCircle, Clock, RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, Bitcoin } from 'lucide-react'
 
 function getDCAPeriod() {
   const now    = new Date()
@@ -42,7 +42,10 @@ export function Portfolio() {
   const activePos = allActive.filter(p => (p.account ?? 'Blueprint') === activeAccount)
   const totalCost        = activePos.reduce((s, p) => s + p.shares * p.avg_cost, 0)
   const totalDCA         = portfolio.filter(p => (p.account ?? 'Blueprint') === 'Blueprint').reduce((s, p) => s + (p.dca_biweekly ?? 0), 0)
-  const totalMarketValue = activePos.reduce((s, p) => s + p.shares * (prices[p.ticker]?.price ?? p.avg_cost), 0)
+  const totalMarketValue = activePos.reduce((s, p) => {
+    const lp = prices[p.ticker]?.price
+    return s + p.shares * (lp > 0 ? lp : p.avg_cost)
+  }, 0)
 
   const fetchPrices = async () => {
     if (allActive.length === 0) return
@@ -97,15 +100,16 @@ export function Portfolio() {
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       {/* Account Tabs */}
       <div className="flex items-center gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
-        {ACCOUNTS.map(acct => (
+        {[...ACCOUNTS, 'Crypto'].map(acct => (
           <button
             key={acct}
             onClick={() => { setActiveAccount(acct); setPanel(null); setEditingPos(null) }}
-            className="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px"
             style={{
               color:       activeAccount === acct ? 'var(--accent-cyan)' : 'var(--text-dim)',
               borderColor: activeAccount === acct ? 'var(--accent-cyan)' : 'transparent',
             }}>
+            {acct === 'Crypto' && <Bitcoin size={12} />}
             {acct}
           </button>
         ))}
@@ -155,11 +159,6 @@ export function Portfolio() {
             <button onClick={fetchPrices} className="text-xs px-2 py-1 rounded border"
               style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }}>Retry</button>
           )}
-          <a href="/portfolio-model.html" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
-            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
-            <BarChart2 size={13} /> Model
-          </a>
           <button onClick={() => { setPanel('trade'); setEditingPos(null) }}
             className="px-3 py-1.5 rounded text-sm font-medium transition-opacity hover:opacity-80"
             style={{ backgroundColor: 'var(--accent-cyan)', color: '#0a0e1a' }}>
@@ -173,8 +172,21 @@ export function Portfolio() {
         </div>
       </div>
 
+      {/* Crypto placeholder */}
+      {activeAccount === 'Crypto' && (
+        <div className="rounded-lg border p-10 flex flex-col items-center justify-center gap-3 text-center"
+          style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
+          <Bitcoin size={32} style={{ color: 'var(--accent-amber)' }} />
+          <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Crypto Portfolio</p>
+          <p className="text-xs max-w-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
+            Live crypto positions coming soon. Prices powered by CoinGecko.
+            Add your holdings once the tracker is wired up.
+          </p>
+        </div>
+      )}
+
       {/* Holdings Table + Side Panel */}
-      <div className={`grid gap-6 ${panel || editingPos ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'}`}>
+      {activeAccount !== 'Crypto' && <div className={`grid gap-6 ${panel || editingPos ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'}`}>
         <div className={`rounded-lg border overflow-hidden ${panel || editingPos ? 'md:col-span-2' : ''}`}
           style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <div className="px-5 py-3 border-b text-xs font-semibold uppercase tracking-wider"
@@ -288,10 +300,10 @@ export function Portfolio() {
             {editingPos        && <EditPositionForm position={editingPos} onSuccess={closePanel} />}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* DCA Tracker + Allocation Chart */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {activeAccount !== 'Crypto' && <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="rounded-lg border p-5" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>DCA Tracker</h2>
@@ -335,7 +347,7 @@ export function Portfolio() {
           </p>
           <AllocationChart portfolio={portfolio} prices={priceStatus === 'connected' ? prices : {}} />
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

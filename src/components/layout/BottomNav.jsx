@@ -7,8 +7,8 @@ const ITEMS = [
   { path: '/budget',     Icon: Wallet,          label: 'Budget'    },
   { path: '/networth',   Icon: TrendingUp,      label: 'Net Worth' },
   { path: '/portfolio',  Icon: Briefcase,       label: 'Portfolio' },
-  { path: '/milestones', Icon: Target,          label: 'Goals'     },
   { path: '/model',      Icon: BarChart2,       label: 'Model'     },
+  { path: '/milestones', Icon: Target,          label: 'Goals'     },
   { path: '/settings',   Icon: Settings,        label: 'Settings'  },
 ]
 

@@ -176,9 +176,14 @@ function ScenarioLabel({ s }) {
   )
 }
 
-function PositionCard({ pos, livePrices, isWatchlist = false, onRemove }) {
+function PositionCard({ pos, livePrices, isWatchlist = false, onRemove, forceOpen, forceKey }) {
   const [open, setOpen] = useState(true)
   const curr = livePrices[pos.t] ?? FALLBACK_PRICES[pos.t] ?? 0
+
+  // Sync with external expand/collapse all
+  useEffect(() => {
+    if (forceKey > 0) setOpen(forceOpen)
+  }, [forceKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="rounded-lg border overflow-hidden transition-colors"
@@ -296,6 +301,14 @@ export function Model() {
   // Tab / view
   const [activeTab,  setActiveTab]  = useState('Analysis')
   const [cardView,   setCardView]   = useState(true)
+  const [allOpen,    setAllOpen]    = useState(true)
+  const [forceKey,   setForceKey]   = useState(0)
+
+  const toggleAll = () => {
+    const next = !allOpen
+    setAllOpen(next)
+    setForceKey(k => k + 1)
+  }
 
   // Portfolio model controls
   const blueprintPos = useMemo(() => portfolio.filter(p => (p.account ?? 'Blueprint') === 'Blueprint'), [portfolio])
@@ -566,6 +579,12 @@ export function Model() {
             </span>
             <div className="flex items-center gap-2">
               <button
+                onClick={toggleAll}
+                className="px-2.5 py-1.5 rounded text-xs border transition-colors"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-dim)' }}>
+                {allOpen ? 'Collapse All' : 'Expand All'}
+              </button>
+              <button
                 onClick={() => setCardView(true)}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs border transition-colors"
                 style={{
@@ -591,7 +610,7 @@ export function Model() {
           {cardView ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {POSITION_DATA.map(pos => (
-                <PositionCard key={pos.t} pos={pos} livePrices={prices} />
+                <PositionCard key={pos.t} pos={pos} livePrices={prices} forceOpen={allOpen} forceKey={forceKey} />
               ))}
             </div>
           ) : (
