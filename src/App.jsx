@@ -11,6 +11,7 @@ import { Portfolio }  from './pages/Portfolio'
 import { Milestones } from './pages/Milestones'
 import { Settings }   from './pages/Settings'
 import { Login }      from './pages/Login'
+import { Model }      from './pages/Model'
 
 function Loader() {
   return (
@@ -40,6 +41,7 @@ function AppRoutes() {
               <Route path="/portfolio"  element={<Portfolio />}  />
               <Route path="/milestones" element={<Milestones />} />
               <Route path="/settings"   element={<Settings />}   />
+              <Route path="/model"      element={<Model />}      />
             </Routes>
           </PageWrapper>
         } />

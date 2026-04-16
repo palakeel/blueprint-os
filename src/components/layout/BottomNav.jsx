@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Wallet, TrendingUp, Briefcase, Target, Settings, Eye, EyeOff } from 'lucide-react'
+import { LayoutDashboard, Wallet, TrendingUp, Briefcase, Target, Settings, BarChart2, Eye, EyeOff } from 'lucide-react'
 import { usePrivacy } from '../../context/PrivacyContext'
 
 const ITEMS = [
@@ -8,6 +8,7 @@ const ITEMS = [
   { path: '/networth',   Icon: TrendingUp,      label: 'Net Worth' },
   { path: '/portfolio',  Icon: Briefcase,       label: 'Portfolio' },
   { path: '/milestones', Icon: Target,          label: 'Goals'     },
+  { path: '/model',      Icon: BarChart2,       label: 'Model'     },
   { path: '/settings',   Icon: Settings,        label: 'Settings'  },
 ]
 

@@ -40,21 +40,21 @@ const SEED_RECEIVABLES = [
   { id: 'seed-r1', person_name: 'Andrew', amount: 1400, description: '', created_date: '2026-03-01', is_received: false },
 ]
 
+// April 15 2026 — updated to reflect actual positions (SCHD/IREN/BIDU/INFQ sold)
 const SEED_PORTFOLIO = [
-  { id: 'seed-p1',  ticker: 'SCHD',  shares: 20.88,  avg_cost: 30.53,  target_allocation: 10, dca_biweekly: 27,   account: 'Blueprint' },
-  { id: 'seed-p2',  ticker: 'HOOD',  shares: 8.073,  avg_cost: 71.13,  target_allocation: 2,  dca_biweekly: 5,    account: 'Blueprint' },
-  { id: 'seed-p3',  ticker: 'IREN',  shares: 40.317, avg_cost: 38.65,  target_allocation: 5,  dca_biweekly: 11,   account: 'Blueprint' },
-  { id: 'seed-p4',  ticker: 'VOO',   shares: 4.06,   avg_cost: 584.60, target_allocation: 13, dca_biweekly: 38,   account: 'Blueprint' },
-  { id: 'seed-p5',  ticker: 'AMZN',  shares: 10.178, avg_cost: 202.41, target_allocation: 15, dca_biweekly: 38,   account: 'Blueprint' },
-  { id: 'seed-p6',  ticker: 'TSLA',  shares: 4.093,  avg_cost: 361.49, target_allocation: 13, dca_biweekly: 32,   account: 'Blueprint' },
-  { id: 'seed-p7',  ticker: 'GOOGL', shares: 4.082,  avg_cost: 281.96, target_allocation: 9,  dca_biweekly: 25,   account: 'Blueprint' },
-  { id: 'seed-p8',  ticker: 'META',  shares: 2.0368, avg_cost: 558.55, target_allocation: 8,  dca_biweekly: 21,   account: 'Blueprint' },
-  { id: 'seed-p9',  ticker: 'AMD',   shares: 2.123,  avg_cost: 200.65, target_allocation: 8,  dca_biweekly: 27,   account: 'Blueprint' },
-  { id: 'seed-p10', ticker: 'NVDA',  shares: 0.10,   avg_cost: 175.91, target_allocation: 8,  dca_biweekly: 18,   account: 'Blueprint' },
-  { id: 'seed-p11', ticker: 'VST',   shares: 0.085,  avg_cost: 151.75, target_allocation: 2,  dca_biweekly: 13,   account: 'Blueprint' },
-  { id: 'seed-p12', ticker: 'NBIS',  shares: 3,      avg_cost: 101.02, target_allocation: 1,  dca_biweekly: null, account: 'Blueprint' },
-  { id: 'seed-p13', ticker: 'INFQ',  shares: 21,     avg_cost: 10.87,  target_allocation: 1,  dca_biweekly: null, account: 'Blueprint' },
-  { id: 'seed-p14', ticker: 'BIDU',  shares: 3,      avg_cost: 114.50, target_allocation: 1,  dca_biweekly: null, account: 'Blueprint' },
+  { id: 'seed-p1',  ticker: 'AMZN',  shares: 10.18,     avg_cost: 203.00, target_allocation: 16, dca_biweekly: 35, account: 'Blueprint' },
+  { id: 'seed-p2',  ticker: 'VOO',   shares: 4.06,      avg_cost: 595.00, target_allocation: 10, dca_biweekly: 14, account: 'Blueprint' },
+  { id: 'seed-p3',  ticker: 'NOW',   shares: 27,        avg_cost: 88.56,  target_allocation: 7,  dca_biweekly: 25, account: 'Blueprint' },
+  { id: 'seed-p4',  ticker: 'INTU',  shares: 6,         avg_cost: 368.33, target_allocation: 5,  dca_biweekly: 25, account: 'Blueprint' },
+  { id: 'seed-p5',  ticker: 'TSLA',  shares: 4.09,      avg_cost: 350.00, target_allocation: 11, dca_biweekly: 30, account: 'Blueprint' },
+  { id: 'seed-p6',  ticker: 'GOOGL', shares: 4.08,      avg_cost: 280.00, target_allocation: 10, dca_biweekly: 25, account: 'Blueprint' },
+  { id: 'seed-p7',  ticker: 'META',  shares: 2.04,      avg_cost: 555.00, target_allocation: 8,  dca_biweekly: 20, account: 'Blueprint' },
+  { id: 'seed-p8',  ticker: 'HOOD',  shares: 8.07,      avg_cost: 68.00,  target_allocation: 2,  dca_biweekly: 0,  account: 'Blueprint' },
+  { id: 'seed-p9',  ticker: 'AMD',   shares: 2.12,      avg_cost: 198.00, target_allocation: 8,  dca_biweekly: 30, account: 'Blueprint' },
+  { id: 'seed-p10', ticker: 'NBIS',  shares: 3,         avg_cost: 101.00, target_allocation: 3,  dca_biweekly: 0,  account: 'Blueprint' },
+  { id: 'seed-p11', ticker: 'SMH',   shares: 0.045479,  avg_cost: 439.76, target_allocation: 8,  dca_biweekly: 35, account: 'Blueprint' },
+  { id: 'seed-p12', ticker: 'NVDA',  shares: 0.102325,  avg_cost: 175.91, target_allocation: 8,  dca_biweekly: 40, account: 'Blueprint' },
+  { id: 'seed-p13', ticker: 'VST',   shares: 0.08567,   avg_cost: 151.75, target_allocation: 4,  dca_biweekly: 15, account: 'Blueprint' },
 ]
 
 export const ACCOUNTS = ['Blueprint', 'Roth IRA', 'Trading']
