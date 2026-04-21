@@ -11,8 +11,9 @@ import { RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, Bitcoin, DollarSign } f
 
 const DCA_FREQUENCIES = ['Weekly', 'Biweekly', 'Monthly', 'Quarterly']
 
-// Multiplier relative to biweekly base (26 periods/year)
-const DCA_MULTIPLIER = { weekly: 0.5, biweekly: 1, monthly: 26 / 12, quarterly: 26 / 4 }
+// Multiplier relative to biweekly base
+// Monthly = 2 biweekly payments, Quarterly = 6 biweekly payments
+const DCA_MULTIPLIER = { weekly: 0.5, biweekly: 1, monthly: 2, quarterly: 6 }
 
 export function Portfolio() {
   const { portfolio, setPortfolio, accountCash, setAccountCash } = useData()
@@ -25,6 +26,7 @@ export function Portfolio() {
   const [editingCash,   setEditingCash]  = useState(false)
   const [cashInput,     setCashInput]    = useState('')
   const [savingCash,    setSavingCash]   = useState(false)
+  const [cashError,     setCashError]    = useState('')
   // All positions with shares (used for price fetching — pull from all accounts)
   const allActive = portfolio.filter(p => p.shares > 0)
   // Positions scoped to the selected account tab
@@ -55,10 +57,16 @@ export function Portfolio() {
     const balance = freq != null ? (accountCash[activeAccount]?.balance ?? 0) : (parseFloat(cashInput) || 0)
     const dca_frequency = freq ?? (accountCash[activeAccount]?.dca_frequency ?? 'biweekly')
     setSavingCash(true)
-    await supabase.from('account_cash').upsert(
+    setCashError('')
+    const { error } = await supabase.from('account_cash').upsert(
       { user_id: user.id, account: activeAccount, balance, dca_frequency, updated_at: new Date().toISOString() },
       { onConflict: 'user_id,account' }
     )
+    if (error) {
+      setCashError(error.message)
+      setSavingCash(false)
+      return
+    }
     setAccountCash(prev => ({ ...prev, [activeAccount]: { balance, dca_frequency } }))
     if (freq == null) setEditingCash(false)
     setSavingCash(false)
@@ -156,6 +164,9 @@ export function Portfolio() {
               </span>
             )}
           </div>
+          {cashError && (
+            <p className="text-xs mt-1" style={{ color: 'var(--accent-red)' }}>Save failed: {cashError}</p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {priceStatus === 'not_connected' && (
@@ -394,7 +405,7 @@ export function Portfolio() {
           <p className="text-xs mb-4" style={{ color: 'var(--text-dim)' }}>
             {priceStatus === 'connected' ? 'Based on live market value' : 'Based on cost basis (no live prices)'}
           </p>
-          <AllocationChart portfolio={portfolio} prices={priceStatus === 'connected' ? prices : {}} />
+          <AllocationChart portfolio={activePos} prices={priceStatus === 'connected' ? prices : {}} />
         </div>
       </div>}
     </div>
