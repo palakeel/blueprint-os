@@ -26,11 +26,12 @@ export function Portfolio() {
   const allActive = portfolio.filter(p => p.shares > 0)
   // Positions scoped to the selected account tab
   const activePos = allActive.filter(p => (p.account ?? 'Blueprint') === activeAccount)
-  const totalCost        = activePos.reduce((s, p) => s + p.shares * p.avg_cost, 0)
+  const cashBalance      = activeAccount !== 'Crypto' ? (accountCash[activeAccount]?.balance ?? 0) : 0
+  const totalCost        = activePos.reduce((s, p) => s + p.shares * p.avg_cost, 0) + cashBalance
   const totalMarketValue = activePos.reduce((s, p) => {
     const lp = prices[p.ticker]?.price
     return s + p.shares * (lp > 0 ? lp : p.avg_cost)
-  }, 0)
+  }, 0) + cashBalance
 
   const fetchPrices = async () => {
     if (allActive.length === 0) return
@@ -103,13 +104,6 @@ export function Portfolio() {
             {priceStatus === 'connected' && (
               <span className="tabular-nums text-sm" style={{ color: totalMarketValue - totalCost >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontFamily: "'JetBrains Mono', monospace" }}>
                 <Private>{totalMarketValue - totalCost >= 0 ? '+' : ''}{formatMoney(totalMarketValue - totalCost)} P&L</Private>
-              </span>
-            )}
-            {/* Cash balance (read-only — edit via + panel) */}
-            {activeAccount !== 'Crypto' && (accountCash[activeAccount]?.balance ?? 0) > 0 && (
-              <span className="tabular-nums text-sm" style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                <Private>+{formatMoney(accountCash[activeAccount].balance)}</Private>
-                <span className="text-xs ml-1" style={{ color: 'var(--text-dim)' }}>cash</span>
               </span>
             )}
           </div>

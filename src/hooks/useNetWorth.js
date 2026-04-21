@@ -1,11 +1,13 @@
 import { useData } from '../context/DataContext'
+import { useLiveNetWorth } from './useLiveNetWorth'
 import { calcDailyVelocity } from '../lib/calculations'
 
 export function useNetWorth() {
-  const { netWorthHistory, latestNetWorth, prevNetWorth } = useData()
+  const { netWorthHistory, prevNetWorth } = useData()
+  const { liveTotal } = useLiveNetWorth()
 
-  const current   = latestNetWorth?.net_worth ?? 0
-  const prev      = prevNetWorth?.net_worth   ?? 0
+  const current   = liveTotal
+  const prev      = prevNetWorth?.net_worth ?? 0
   const momChange = current - prev
   const momPct    = prev > 0 ? ((current - prev) / prev) * 100 : 0
 
