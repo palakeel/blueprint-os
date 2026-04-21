@@ -7,7 +7,7 @@ import { EditPositionForm }    from '../components/forms/EditPositionForm'
 import { supabase }            from '../lib/supabase'
 import { formatMoney }         from '../lib/formatters'
 import { Private }             from '../components/ui/Private'
-import { CheckCircle, Clock, RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, Bitcoin } from 'lucide-react'
+import { CheckCircle, Clock, RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, Bitcoin, DollarSign } from 'lucide-react'
 
 function getDCAPeriod() {
   const now    = new Date()
@@ -25,15 +25,18 @@ function getDCAPeriod() {
 }
 
 export function Portfolio() {
-  const { portfolio, setPortfolio, gamification, setGamification } = useData()
+  const { portfolio, setPortfolio, accountCash, setAccountCash, gamification, setGamification } = useData()
   const { user } = useAuth()
   const [dcaConfirmed, setDcaConfirmed] = useState(false)
   const [confirming,   setConfirming]   = useState(false)
   const [prices,       setPrices]       = useState({})
   const [priceStatus,  setPriceStatus]  = useState('idle')
-  const [panel,        setPanel]        = useState(null) // null | 'trade' | 'add' | {editPos}
+  const [panel,        setPanel]        = useState(null)
   const [editingPos,   setEditingPos]   = useState(null)
   const [activeAccount, setActiveAccount] = useState(ACCOUNTS[0])
+  const [editingCash,  setEditingCash]  = useState(false)
+  const [cashInput,    setCashInput]    = useState('')
+  const [savingCash,   setSavingCash]   = useState(false)
 
   const period    = getDCAPeriod()
   // All positions with shares (used for price fetching — pull from all accounts)
@@ -79,6 +82,19 @@ export function Portfolio() {
     }
     setDcaConfirmed(true)
     setConfirming(false)
+  }
+
+  const saveCash = async () => {
+    if (!user) return
+    const balance = parseFloat(cashInput) || 0
+    setSavingCash(true)
+    await supabase.from('account_cash').upsert(
+      { user_id: user.id, account: activeAccount, balance, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,account' }
+    )
+    setAccountCash(prev => ({ ...prev, [activeAccount]: balance }))
+    setEditingCash(false)
+    setSavingCash(false)
   }
 
   const deletePosition = async (pos) => {
@@ -137,6 +153,39 @@ export function Portfolio() {
             {priceStatus === 'connected' && (
               <span className="tabular-nums text-sm" style={{ color: totalMarketValue - totalCost >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontFamily: "'JetBrains Mono', monospace" }}>
                 <Private>{totalMarketValue - totalCost >= 0 ? '+' : ''}{formatMoney(totalMarketValue - totalCost)} P&L</Private>
+              </span>
+            )}
+            {/* Cash balance */}
+            {activeAccount !== 'Crypto' && (
+              <span className="flex items-center gap-1.5">
+                <DollarSign size={11} style={{ color: 'var(--text-dim)' }} />
+                {editingCash ? (
+                  <span className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      type="number" min="0" step="0.01"
+                      value={cashInput}
+                      onChange={e => setCashInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveCash(); if (e.key === 'Escape') setEditingCash(false) }}
+                      className="w-24 text-sm px-2 py-0.5 rounded border outline-none tabular-nums"
+                      style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--accent-cyan)', color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}
+                    />
+                    <button onClick={saveCash} disabled={savingCash}
+                      className="text-xs px-2 py-0.5 rounded"
+                      style={{ backgroundColor: 'var(--accent-cyan)', color: '#0a0e1a' }}>
+                      {savingCash ? '…' : 'Save'}
+                    </button>
+                    <button onClick={() => setEditingCash(false)} className="text-xs" style={{ color: 'var(--text-dim)' }}>✕</button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => { setCashInput(String(accountCash[activeAccount] ?? '')); setEditingCash(true) }}
+                    className="tabular-nums text-sm hover:opacity-70 transition-opacity"
+                    style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    <Private>{accountCash[activeAccount] > 0 ? formatMoney(accountCash[activeAccount]) : 'Add cash'}</Private>
+                    <span className="text-xs ml-1" style={{ color: 'var(--text-dim)' }}>cash</span>
+                  </button>
+                )}
               </span>
             )}
           </div>

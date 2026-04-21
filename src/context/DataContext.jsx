@@ -24,6 +24,7 @@ export function DataProvider({ children }) {
   const [milestones,      setMilestones]      = useState([])
   const [receivables,     setReceivables]     = useState([])
   const [portfolio,       setPortfolio]       = useState([])
+  const [accountCash,     setAccountCash]     = useState({})  // { Blueprint: 0, 'Roth IRA': 0, Trading: 0 }
   const [gamification,    setGamification]    = useState(null)
   const [loading,         setLoading]         = useState(false)
   const [lastUpdated,     setLastUpdated]     = useState(new Date())
@@ -32,12 +33,13 @@ export function DataProvider({ children }) {
     if (!user) return
     setLoading(true)
     try {
-      const [nwRes, budgetRes, msRes, recRes, portRes, gamRes] = await Promise.all([
+      const [nwRes, budgetRes, msRes, recRes, portRes, cashRes, gamRes] = await Promise.all([
         supabase.from('net_worth_entries').select('*').eq('user_id', user.id).order('entry_date', { ascending: false }),
         supabase.from('budget_entries').select('*').eq('user_id', user.id).order('week_start', { ascending: false }),
         supabase.from('milestones').select('*').eq('user_id', user.id).order('target_amount'),
         supabase.from('receivables').select('*').eq('user_id', user.id).order('created_date', { ascending: false }),
         supabase.from('portfolio_positions').select('*').eq('user_id', user.id).order('ticker'),
+        supabase.from('account_cash').select('*').eq('user_id', user.id),
         supabase.from('gamification').select('*').eq('user_id', user.id).maybeSingle(),
       ])
       if (nwRes.data)    setNetWorthHistory(nwRes.data)
@@ -45,6 +47,7 @@ export function DataProvider({ children }) {
       if (msRes.data)    setMilestones(msRes.data)
       if (recRes.data)   setReceivables(recRes.data)
       if (portRes.data)  setPortfolio(portRes.data)
+      if (cashRes.data)  setAccountCash(Object.fromEntries(cashRes.data.map(r => [r.account, r.balance])))
       if (gamRes.data)   setGamification(gamRes.data)
       setLastUpdated(new Date())
     } finally {
@@ -61,6 +64,7 @@ export function DataProvider({ children }) {
       milestones,      setMilestones,
       receivables,     setReceivables,
       portfolio,       setPortfolio,
+      accountCash,     setAccountCash,
       gamification,    setGamification,
       budgetTargets: BUDGET_TARGETS,
       latestNetWorth: netWorthHistory[0] ?? null,
