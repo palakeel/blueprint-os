@@ -14,6 +14,16 @@ const DCA_FREQUENCIES = ['Weekly', 'Biweekly', 'Monthly', 'Quarterly']
 // Monthly = 2 biweekly payments, Quarterly = 6 biweekly payments
 const DCA_MULTIPLIER = { weekly: 0.5, biweekly: 1, monthly: 2, quarterly: 6 }
 
+// Ticker symbol → CoinGecko coin ID
+const CRYPTO_IDS = {
+  BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
+  XRP: 'ripple', ADA: 'cardano', AVAX: 'avalanche-2', DOT: 'polkadot',
+  DOGE: 'dogecoin', LINK: 'chainlink', MATIC: 'matic-network', UNI: 'uniswap',
+  ATOM: 'cosmos', LTC: 'litecoin', BCH: 'bitcoin-cash', NEAR: 'near',
+  APT: 'aptos', ARB: 'arbitrum', OP: 'optimism', SUI: 'sui',
+  TON: 'the-open-network', PEPE: 'pepe', SHIB: 'shiba-inu',
+}
+
 export function Portfolio() {
   const { portfolio, setPortfolio, accountCash, setAccountCash } = useData()
   const { user } = useAuth()
@@ -33,17 +43,58 @@ export function Portfolio() {
     return s + p.shares * (lp > 0 ? lp : p.avg_cost)
   }, 0) + cashBalance
 
+  const stockPositions  = allActive.filter(p => (p.account ?? 'Blueprint') !== 'Crypto')
+  const cryptoPositions = allActive.filter(p => (p.account ?? 'Blueprint') === 'Crypto')
+
   const fetchPrices = async () => {
     if (allActive.length === 0) return
     setPriceStatus('loading')
-    const tickers = allActive.map(p => p.ticker).join(',')
-    try {
-      const res  = await fetch(`/api/schwab/quotes?tickers=${encodeURIComponent(tickers)}`)
-      const data = await res.json()
-      if (res.status === 401 || data.error === 'not_connected') setPriceStatus('not_connected')
-      else if (!res.ok) setPriceStatus('error')
-      else { setPrices(data); setPriceStatus('connected') }
-    } catch { setPriceStatus('error') }
+    const merged = {}
+
+    // Stock prices via Schwab
+    if (stockPositions.length > 0) {
+      try {
+        const tickers = stockPositions.map(p => p.ticker).join(',')
+        const res  = await fetch(`/api/schwab/quotes?tickers=${encodeURIComponent(tickers)}`)
+        const data = await res.json()
+        if (res.status === 401 || data.error === 'not_connected') {
+          setPriceStatus('not_connected')
+        } else if (res.ok) {
+          Object.assign(merged, data)
+        }
+      } catch { /* stock prices unavailable */ }
+    }
+
+    // Crypto prices via CoinGecko (free, no key)
+    if (cryptoPositions.length > 0) {
+      try {
+        const ids = cryptoPositions
+          .map(p => CRYPTO_IDS[p.ticker.toUpperCase()] ?? p.ticker.toLowerCase())
+          .filter(Boolean).join(',')
+        const res  = await fetch(`/api/coingecko/prices?ids=${encodeURIComponent(ids)}`)
+        const data = await res.json()
+        if (res.ok) {
+          // Re-key by ticker symbol for consistent lookup
+          for (const pos of cryptoPositions) {
+            const id = CRYPTO_IDS[pos.ticker.toUpperCase()] ?? pos.ticker.toLowerCase()
+            if (data[id]) {
+              merged[pos.ticker] = {
+                price:         data[id].usd,
+                changePercent: data[id].usd_24h_change ?? 0,
+                session:       'crypto',
+              }
+            }
+          }
+        }
+      } catch { /* crypto prices unavailable */ }
+    }
+
+    if (Object.keys(merged).length > 0) {
+      setPrices(merged)
+      setPriceStatus('connected')
+    } else if (allActive.length > 0) {
+      setPriceStatus(stockPositions.length > 0 ? 'not_connected' : 'error')
+    }
   }
 
   useEffect(() => { fetchPrices() }, [allActive.length])
@@ -87,12 +138,17 @@ export function Portfolio() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{activeAccount} Portfolio</h1>
-            {priceStatus === 'connected' && (() => {
+            {priceStatus === 'connected' && activeAccount !== 'Crypto' && (() => {
               const session = Object.values(prices)[0]?.session
               return session === 'regular'
                 ? <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-green)' }}>☀ RH</span>
                 : <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-amber)' }}>🌙 AH</span>
             })()}
+            {priceStatus === 'connected' && activeAccount === 'Crypto' && (
+              <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent-amber)' }}>
+                <Bitcoin size={10} className="inline mr-0.5" /> CoinGecko
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             <span className="tabular-nums text-sm" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -145,21 +201,8 @@ export function Portfolio() {
         </div>
       </div>
 
-      {/* Crypto placeholder */}
-      {activeAccount === 'Crypto' && (
-        <div className="rounded-lg border p-10 flex flex-col items-center justify-center gap-3 text-center"
-          style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-          <Bitcoin size={32} style={{ color: 'var(--accent-amber)' }} />
-          <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Crypto Portfolio</p>
-          <p className="text-xs max-w-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
-            Live crypto positions coming soon. Prices powered by CoinGecko.
-            Add your holdings once the tracker is wired up.
-          </p>
-        </div>
-      )}
-
       {/* Holdings Table + Side Panel */}
-      {activeAccount !== 'Crypto' && <div className={`grid gap-6 ${panel || editingPos ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'}`}>
+      <div className={`grid gap-6 ${panel || editingPos ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'}`}>
         <div className={`rounded-lg border overflow-hidden ${panel || editingPos ? 'md:col-span-2' : ''}`}
           style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <div className="px-5 py-3 border-b text-xs font-semibold uppercase tracking-wider"
@@ -310,9 +353,9 @@ export function Portfolio() {
             {editingPos        && <EditPositionForm position={editingPos} onSuccess={closePanel} />}
           </div>
         )}
-      </div>}
+      </div>
 
-      {/* DCA Tracker + Allocation Chart */}
+      {/* DCA Tracker + Allocation Chart — stock accounts only */}
       {activeAccount !== 'Crypto' && <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="rounded-lg border p-5" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>DCA Plan</h2>

@@ -115,7 +115,7 @@ export function EditPositionForm({ position, defaultAccount, onSuccess }) {
             <select value={account} onChange={e => setAccount(e.target.value)}
               className="w-full text-sm px-2 py-1.5 rounded border outline-none"
               style={fieldStyle}>
-              {ACCOUNTS.map(a => <option key={a} value={a}>{a}</option>)}
+              {[...ACCOUNTS, 'Crypto'].map(a => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
         </div>
