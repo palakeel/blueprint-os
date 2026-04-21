@@ -4,10 +4,9 @@ import { useAuth }             from '../context/AuthContext'
 import { AllocationChart }     from '../components/charts/AllocationChart'
 import { LogTradeForm }        from '../components/forms/LogTradeForm'
 import { EditPositionForm }    from '../components/forms/EditPositionForm'
-import { supabase }            from '../lib/supabase'
 import { formatMoney }         from '../lib/formatters'
 import { Private }             from '../components/ui/Private'
-import { RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, Bitcoin, DollarSign } from 'lucide-react'
+import { RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, Bitcoin } from 'lucide-react'
 
 const DCA_FREQUENCIES = ['Weekly', 'Biweekly', 'Monthly', 'Quarterly']
 
@@ -23,10 +22,6 @@ export function Portfolio() {
   const [panel,         setPanel]        = useState(null)
   const [editingPos,    setEditingPos]   = useState(null)
   const [activeAccount, setActiveAccount] = useState(ACCOUNTS[0])
-  const [editingCash,   setEditingCash]  = useState(false)
-  const [cashInput,     setCashInput]    = useState('')
-  const [savingCash,    setSavingCash]   = useState(false)
-  const [cashError,     setCashError]    = useState('')
   // All positions with shares (used for price fetching — pull from all accounts)
   const allActive = portfolio.filter(p => p.shares > 0)
   // Positions scoped to the selected account tab
@@ -51,26 +46,6 @@ export function Portfolio() {
   }
 
   useEffect(() => { fetchPrices() }, [allActive.length])
-
-  const saveCash = async (freq) => {
-    if (!user) return
-    const balance = freq != null ? (accountCash[activeAccount]?.balance ?? 0) : (parseFloat(cashInput) || 0)
-    const dca_frequency = freq ?? (accountCash[activeAccount]?.dca_frequency ?? 'biweekly')
-    setSavingCash(true)
-    setCashError('')
-    const { error } = await supabase.from('account_cash').upsert(
-      { user_id: user.id, account: activeAccount, balance, dca_frequency, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id,account' }
-    )
-    if (error) {
-      setCashError(error.message)
-      setSavingCash(false)
-      return
-    }
-    setAccountCash(prev => ({ ...prev, [activeAccount]: { balance, dca_frequency } }))
-    if (freq == null) setEditingCash(false)
-    setSavingCash(false)
-  }
 
   const deletePosition = async (pos) => {
     if (!confirm(`Remove ${pos.ticker} from portfolio?`)) return
@@ -130,43 +105,14 @@ export function Portfolio() {
                 <Private>{totalMarketValue - totalCost >= 0 ? '+' : ''}{formatMoney(totalMarketValue - totalCost)} P&L</Private>
               </span>
             )}
-            {/* Cash balance */}
-            {activeAccount !== 'Crypto' && (
-              <span className="flex items-center gap-1.5">
-                <DollarSign size={11} style={{ color: 'var(--text-dim)' }} />
-                {editingCash ? (
-                  <span className="flex items-center gap-1">
-                    <input
-                      autoFocus
-                      type="number" min="0" step="0.01"
-                      value={cashInput}
-                      onChange={e => setCashInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') saveCash(); if (e.key === 'Escape') setEditingCash(false) }}
-                      className="w-24 text-sm px-2 py-0.5 rounded border outline-none tabular-nums"
-                      style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--accent-cyan)', color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}
-                    />
-                    <button onClick={saveCash} disabled={savingCash}
-                      className="text-xs px-2 py-0.5 rounded"
-                      style={{ backgroundColor: 'var(--accent-cyan)', color: '#0a0e1a' }}>
-                      {savingCash ? '…' : 'Save'}
-                    </button>
-                    <button onClick={() => setEditingCash(false)} className="text-xs" style={{ color: 'var(--text-dim)' }}>✕</button>
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => { setCashInput(String(accountCash[activeAccount]?.balance ?? '')); setEditingCash(true) }}
-                    className="tabular-nums text-sm hover:opacity-70 transition-opacity"
-                    style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                    <Private>{(accountCash[activeAccount]?.balance ?? 0) > 0 ? formatMoney(accountCash[activeAccount].balance) : 'Add cash'}</Private>
-                    <span className="text-xs ml-1" style={{ color: 'var(--text-dim)' }}>cash</span>
-                  </button>
-                )}
+            {/* Cash balance (read-only — edit via + panel) */}
+            {activeAccount !== 'Crypto' && (accountCash[activeAccount]?.balance ?? 0) > 0 && (
+              <span className="tabular-nums text-sm" style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                <Private>+{formatMoney(accountCash[activeAccount].balance)}</Private>
+                <span className="text-xs ml-1" style={{ color: 'var(--text-dim)' }}>cash</span>
               </span>
             )}
           </div>
-          {cashError && (
-            <p className="text-xs mt-1" style={{ color: 'var(--accent-red)' }}>Save failed: {cashError}</p>
-          )}
         </div>
         <div className="flex items-center gap-2">
           {priceStatus === 'not_connected' && (
@@ -385,7 +331,16 @@ export function Portfolio() {
                 return (
                   <button
                     key={f}
-                    onClick={() => saveCash(f.toLowerCase())}
+                    onClick={async () => {
+                      if (!user) return
+                      const freq = f.toLowerCase()
+                      const balance = accountCash[activeAccount]?.balance ?? 0
+                      await supabase.from('account_cash').upsert(
+                        { user_id: user.id, account: activeAccount, balance, dca_frequency: freq, updated_at: new Date().toISOString() },
+                        { onConflict: 'user_id,account' }
+                      )
+                      setAccountCash(prev => ({ ...prev, [activeAccount]: { balance, dca_frequency: freq } }))
+                    }}
                     className="px-2.5 py-1 rounded text-xs font-medium transition-opacity hover:opacity-80"
                     style={{
                       backgroundColor: active ? 'var(--accent-amber)' : 'var(--bg-tertiary)',

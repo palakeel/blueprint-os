@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useData, ACCOUNTS } from '../../context/DataContext'
@@ -12,17 +12,24 @@ const fieldStyle = {
 
 export function EditPositionForm({ position, defaultAccount, onSuccess }) {
   const { user } = useAuth()
-  const { portfolio, setPortfolio } = useData()
+  const { portfolio, setPortfolio, accountCash, setAccountCash } = useData()
 
-  const [ticker,     setTicker]     = useState(position?.ticker ?? '')
-  const [shares,     setShares]     = useState(position ? String(position.shares) : '')
-  const [avgCost,    setAvgCost]    = useState(position ? String(position.avg_cost) : '')
-  const [target,     setTarget]     = useState(position ? String(position.target_allocation ?? '') : '')
-  const [dca,        setDca]        = useState(position ? String(position.dca_biweekly ?? '') : '')
-  const [account,    setAccount]    = useState(position?.account ?? defaultAccount ?? 'Blueprint')
-  const [notes,      setNotes]      = useState(position?.notes ?? '')
-  const [saving,     setSaving]     = useState(false)
-  const [error,      setError]      = useState('')
+  const [ticker,       setTicker]       = useState(position?.ticker ?? '')
+  const [shares,       setShares]       = useState(position ? String(position.shares) : '')
+  const [avgCost,      setAvgCost]      = useState(position ? String(position.avg_cost) : '')
+  const [target,       setTarget]       = useState(position ? String(position.target_allocation ?? '') : '')
+  const [dca,          setDca]          = useState(position ? String(position.dca_biweekly ?? '') : '')
+  const [account,      setAccount]      = useState(position?.account ?? defaultAccount ?? 'Blueprint')
+  const [notes,        setNotes]        = useState(position?.notes ?? '')
+  const [cashBalance,  setCashBalance]  = useState('')
+  const [saving,       setSaving]       = useState(false)
+  const [error,        setError]        = useState('')
+
+  // Keep cash field in sync with whichever account is selected
+  useEffect(() => {
+    const bal = accountCash[account]?.balance
+    setCashBalance(bal != null ? String(bal) : '')
+  }, [account, accountCash])
 
   const isNew = !position
 
@@ -68,6 +75,18 @@ export function EditPositionForm({ position, defaultAccount, onSuccess }) {
           setPortfolio(prev => prev.map(p => p.id === position.id ? { ...p, ...payload } : p))
         }
       }
+      // Save cash balance if user entered a value
+      if (user && cashBalance !== '') {
+        const balance = parseFloat(cashBalance) || 0
+        const dca_frequency = accountCash[account]?.dca_frequency ?? 'biweekly'
+        const { error: cashErr } = await supabase.from('account_cash').upsert(
+          { user_id: user.id, account, balance, dca_frequency, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id,account' }
+        )
+        if (cashErr) throw cashErr
+        setAccountCash(prev => ({ ...prev, [account]: { balance, dca_frequency } }))
+      }
+
       onSuccess?.()
     } catch (err) {
       setError(err.message || 'Failed to save')
@@ -135,6 +154,17 @@ export function EditPositionForm({ position, defaultAccount, onSuccess }) {
               className="w-full text-sm pl-5 pr-2 py-1.5 rounded border outline-none"
               style={fieldStyle} />
           </div>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Cash Balance ({account})</label>
+        <div className="relative">
+          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--text-dim)' }}>$</span>
+          <input type="number" value={cashBalance} onChange={e => setCashBalance(e.target.value)}
+            placeholder="0.00" step="0.01" min="0"
+            className="w-full text-sm pl-5 pr-2 py-1.5 rounded border outline-none"
+            style={fieldStyle} />
         </div>
       </div>
 
