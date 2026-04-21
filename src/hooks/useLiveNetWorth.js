@@ -2,11 +2,14 @@ import { useData } from '../context/DataContext'
 
 const INVESTMENT_ACCOUNTS = ['Blueprint', 'Roth IRA', 'Trading']
 
-const INVESTMENT_SNAPSHOT_KEYS = new Set([
-  'Blueprint', 'Blueprint (Robinhood)', 'Robinhood',
-  'Roth IRA', 'Roth',
-  'Trading', 'Trading Account',
-])
+// Strip any snapshot key that matches these terms (case-insensitive substring)
+// — live portfolio data replaces all of these
+const STRIP_TERMS = ['blueprint', 'robinhood', 'roth', 'trading', 'crypto', 'coinbase', 'hyperliquid']
+
+function isInvestmentKey(key) {
+  const lower = key.toLowerCase()
+  return STRIP_TERMS.some(t => lower.includes(t))
+}
 
 export function useLiveNetWorth() {
   const { latestNetWorth, portfolio, accountCash, marketPrices } = useData()
@@ -14,7 +17,7 @@ export function useLiveNetWorth() {
   // Strip investment account keys from snapshot — live data replaces them
   const accounts = {}
   for (const [key, val] of Object.entries(latestNetWorth?.accounts ?? {})) {
-    if (!INVESTMENT_SNAPSHOT_KEYS.has(key) && val > 0) {
+    if (!isInvestmentKey(key) && val > 0) {
       accounts[key] = val
     }
   }
@@ -32,14 +35,14 @@ export function useLiveNetWorth() {
     if (total > 0) accounts[acct] = total
   }
 
-  // Crypto account
+  // Crypto accounts (Coinbase + Hyperliquid merged into one 'Crypto' entry)
   const cryptoVal = portfolio
-    .filter(p => p.account === 'Crypto' && p.shares > 0)
+    .filter(p => (p.account === 'Crypto' || p.account === 'Hyperliquid') && p.shares > 0)
     .reduce((s, p) => {
       const livePrice = marketPrices[p.ticker.toUpperCase()]
       return s + p.shares * (livePrice ?? p.avg_cost)
     }, 0)
-  const cryptoCash = accountCash['Crypto']?.balance ?? 0
+  const cryptoCash = (accountCash['Crypto']?.balance ?? 0) + (accountCash['Hyperliquid']?.balance ?? 0)
   const cryptoTotal = cryptoVal + cryptoCash
   if (cryptoTotal > 0) accounts['Crypto'] = cryptoTotal
 

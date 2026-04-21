@@ -2,13 +2,17 @@ import { StatCard } from '../ui/StatCard'
 import { useNetWorth } from '../../hooks/useNetWorth'
 import { formatMoneyFull, formatChange, formatPercent } from '../../lib/formatters'
 import { useData } from '../../context/DataContext'
-import { formatDate } from '../../lib/formatters'
 import { Private } from '../ui/Private'
+import { RefreshCw } from 'lucide-react'
 
 export function NetWorthTicker() {
   const { current, momChange, momPct, dailyVelocity } = useNetWorth()
-  const { latestNetWorth } = useData()
+  const { lastPriceUpdate, refreshPrices } = useData()
   const isPos = momChange >= 0
+
+  const priceAge = lastPriceUpdate
+    ? Math.floor((Date.now() - lastPriceUpdate.getTime()) / 60000)
+    : null
 
   return (
     <StatCard title="Net Worth">
@@ -42,11 +46,18 @@ export function NetWorthTicker() {
           </span>
         </div>
 
-        {latestNetWorth?.entry_date && (
-          <div className="text-xs" style={{ color: 'var(--text-dim)' }}>
-            As of {formatDate(latestNetWorth.entry_date)}
-          </div>
-        )}
+        <div className="flex items-center justify-between">
+          <span className="text-xs" style={{ color: 'var(--text-dim)' }}>
+            {priceAge === null ? 'Prices loading…' : priceAge === 0 ? 'Prices live' : `Prices ${priceAge}m ago`}
+          </span>
+          <button
+            onClick={refreshPrices}
+            className="flex items-center gap-1 text-[10px] transition-opacity hover:opacity-70"
+            style={{ color: 'var(--accent-blue)' }}
+          >
+            <RefreshCw size={10} /> Refresh
+          </button>
+        </div>
       </div>
     </StatCard>
   )

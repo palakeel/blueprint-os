@@ -22,6 +22,7 @@ const CRYPTO_IDS = {
   ATOM: 'cosmos', LTC: 'litecoin', BCH: 'bitcoin-cash', NEAR: 'near',
   APT: 'aptos', ARB: 'arbitrum', OP: 'optimism', SUI: 'sui',
   TON: 'the-open-network', PEPE: 'pepe', SHIB: 'shiba-inu',
+  HYPE: 'hyperliquid',
 }
 
 export function Portfolio() {

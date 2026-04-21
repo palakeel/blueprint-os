@@ -17,6 +17,16 @@ export const BUDGET_TARGETS = {
 
 const DataContext = createContext(null)
 
+const CRYPTO_IDS = {
+  BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
+  XRP: 'ripple', ADA: 'cardano', AVAX: 'avalanche-2', DOT: 'polkadot',
+  DOGE: 'dogecoin', LINK: 'chainlink', MATIC: 'matic-network', UNI: 'uniswap',
+  ATOM: 'cosmos', LTC: 'litecoin', BCH: 'bitcoin-cash', NEAR: 'near',
+  APT: 'aptos', ARB: 'arbitrum', OP: 'optimism', SUI: 'sui',
+  TON: 'the-open-network', PEPE: 'pepe', SHIB: 'shiba-inu',
+  HYPE: 'hyperliquid',
+}
+
 export function DataProvider({ children }) {
   const { user } = useAuth()
   const [netWorthHistory, setNetWorthHistory] = useState([])
@@ -29,6 +39,7 @@ export function DataProvider({ children }) {
   const [marketPrices,    setMarketPrices]    = useState({}) // { TICKER: price }
   const [loading,         setLoading]         = useState(false)
   const [lastUpdated,     setLastUpdated]     = useState(new Date())
+  const [lastPriceUpdate, setLastPriceUpdate] = useState(null)
 
   const fetchAll = useCallback(async () => {
     if (!user) return
@@ -58,32 +69,56 @@ export function DataProvider({ children }) {
 
   useEffect(() => { if (user) fetchAll() }, [user, fetchAll])
 
-  // Fetch live crypto prices whenever portfolio changes
-  useEffect(() => {
-    const CRYPTO_IDS = {
-      BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
-      XRP: 'ripple', ADA: 'cardano', AVAX: 'avalanche-2', DOT: 'polkadot',
-      DOGE: 'dogecoin', LINK: 'chainlink', MATIC: 'matic-network', UNI: 'uniswap',
-      ATOM: 'cosmos', LTC: 'litecoin', BCH: 'bitcoin-cash', NEAR: 'near',
-      APT: 'aptos', ARB: 'arbitrum', OP: 'optimism', SUI: 'sui',
-      TON: 'the-open-network', PEPE: 'pepe', SHIB: 'shiba-inu',
-    }
-    const cryptoPos = portfolio.filter(p => p.account === 'Crypto' && p.shares > 0)
-    if (cryptoPos.length === 0) return
-    const ids = cryptoPos.map(p => CRYPTO_IDS[p.ticker.toUpperCase()] ?? p.ticker.toLowerCase()).join(',')
-    fetch(`/api/coingecko/prices?ids=${encodeURIComponent(ids)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (!data) return
-        const prices = {}
-        for (const pos of cryptoPos) {
-          const id = CRYPTO_IDS[pos.ticker.toUpperCase()] ?? pos.ticker.toLowerCase()
-          if (data[id]?.usd) prices[pos.ticker.toUpperCase()] = data[id].usd
+  // Fetch all market prices (stocks + crypto) — runs on load and every 5 min
+  const fetchMarketPrices = useCallback(async () => {
+    if (portfolio.length === 0) return
+    const activePos = portfolio.filter(p => p.shares > 0)
+    const cryptoAccounts = new Set(['Crypto', 'Hyperliquid'])
+    const cryptoPos = activePos.filter(p => cryptoAccounts.has(p.account))
+    const stockPos  = activePos.filter(p => !cryptoAccounts.has(p.account) && (p.account ?? 'Blueprint') !== 'Crypto')
+    const next = {}
+
+    // Stock prices via Schwab
+    if (stockPos.length > 0) {
+      try {
+        const tickers = stockPos.map(p => p.ticker).join(',')
+        const res = await fetch(`/api/schwab/quotes?tickers=${encodeURIComponent(tickers)}`)
+        const data = await res.json()
+        if (res.ok && !data.error) {
+          for (const [ticker, info] of Object.entries(data)) {
+            if (info?.price) next[ticker.toUpperCase()] = info.price
+          }
         }
-        setMarketPrices(prev => ({ ...prev, ...prices }))
-      })
-      .catch(() => {})
+      } catch { /* stock prices unavailable */ }
+    }
+
+    // Crypto prices via CoinGecko
+    if (cryptoPos.length > 0) {
+      try {
+        const ids = cryptoPos.map(p => CRYPTO_IDS[p.ticker.toUpperCase()] ?? p.ticker.toLowerCase()).join(',')
+        const res  = await fetch(`/api/coingecko/prices?ids=${encodeURIComponent(ids)}`)
+        const data = await res.json()
+        if (res.ok) {
+          for (const pos of cryptoPos) {
+            const id = CRYPTO_IDS[pos.ticker.toUpperCase()] ?? pos.ticker.toLowerCase()
+            if (data[id]?.usd) next[pos.ticker.toUpperCase()] = data[id].usd
+          }
+        }
+      } catch { /* crypto prices unavailable */ }
+    }
+
+    if (Object.keys(next).length > 0) {
+      setMarketPrices(prev => ({ ...prev, ...next }))
+      setLastPriceUpdate(new Date())
+    }
   }, [portfolio])
+
+  // Fetch prices on portfolio load and refresh every 5 minutes
+  useEffect(() => {
+    fetchMarketPrices()
+    const id = setInterval(fetchMarketPrices, 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [fetchMarketPrices])
 
   return (
     <DataContext.Provider value={{
@@ -100,7 +135,9 @@ export function DataProvider({ children }) {
       prevNetWorth:   netWorthHistory[1] ?? null,
       loading,
       lastUpdated,
+      lastPriceUpdate,
       refresh: fetchAll,
+      refreshPrices: fetchMarketPrices,
     }}>
       {children}
     </DataContext.Provider>

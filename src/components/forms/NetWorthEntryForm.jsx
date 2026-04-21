@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useData } from '../../context/DataContext'
@@ -6,7 +6,7 @@ import { formatMoney, localDateString } from '../../lib/formatters'
 import { processNetWorthSave } from '../../lib/gamificationActions'
 import { useToast }            from '../../context/ToastContext'
 import { BADGE_DEFINITIONS }   from '../../lib/gamification'
-
+import { RefreshCw }           from 'lucide-react'
 
 const ASSET_ACCOUNTS = [
   'Blueprint (Robinhood)',
@@ -21,6 +21,14 @@ const ASSET_ACCOUNTS = [
 
 const LIABILITY_ACCOUNTS = ['AMEX', 'Robinhood Gold', 'Coinbase One Card']
 
+// Maps form account labels → portfolio account names in DataContext
+const PORTFOLIO_ACCOUNT_MAP = {
+  'Blueprint (Robinhood)': 'Blueprint',
+  'Roth IRA':              'Roth IRA',
+  'Trading Account':       'Trading',
+  'Crypto (Coinbase)':     'Crypto',
+}
+
 const fieldStyle = {
   backgroundColor: 'var(--bg-primary)',
   borderColor: 'var(--border)',
@@ -30,18 +38,42 @@ const fieldStyle = {
 
 export function NetWorthEntryForm({ entry, onSuccess }) {
   const { user } = useAuth()
-  const { netWorthHistory, setNetWorthHistory, gamification, setGamification } = useData()
+  const { netWorthHistory, setNetWorthHistory, gamification, setGamification, portfolio, accountCash, marketPrices } = useData()
   const { addToast } = useToast()
   const latest = netWorthHistory[0]
 
   const isEdit = !!entry
 
-  const [assets, setAssets] = useState(
+  const getPortfolioValue = useCallback((portAcct) => {
+    const posVal = portfolio
+      .filter(p => (p.account ?? 'Blueprint') === portAcct && p.shares > 0)
+      .reduce((s, p) => s + p.shares * (marketPrices[p.ticker.toUpperCase()] ?? p.avg_cost), 0)
+    return posVal + (accountCash[portAcct]?.balance ?? 0)
+  }, [portfolio, accountCash, marketPrices])
+
+  const initAssets = useCallback(() =>
     Object.fromEntries(ASSET_ACCOUNTS.map(a => {
       if (isEdit) return [a, entry.accounts?.[a] > 0 ? String(entry.accounts[a]) : '']
+      const portAcct = PORTFOLIO_ACCOUNT_MAP[a]
+      if (portAcct) {
+        const live = getPortfolioValue(portAcct)
+        return [a, live > 0 ? String(live.toFixed(2)) : '']
+      }
       return [a, latest?.accounts?.[a] > 0 ? String(latest.accounts[a]) : '']
     }))
-  )
+  , [isEdit, entry, latest, getPortfolioValue])
+
+  const [assets, setAssets] = useState(() => initAssets())
+  const [synced, setSynced] = useState(false)
+
+  // Auto-sync once portfolio data arrives (it loads async after mount)
+  useEffect(() => {
+    if (!isEdit && !synced && portfolio.length > 0) {
+      setAssets(initAssets())
+      setSynced(true)
+    }
+  }, [isEdit, synced, portfolio, initAssets])
+
   const [liabilities, setLiabilities] = useState(
     Object.fromEntries(LIABILITY_ACCOUNTS.map(l => {
       if (isEdit) return [l, entry.accounts?.[l] < 0 ? String(Math.abs(entry.accounts[l])) : '']
@@ -123,13 +155,29 @@ export function NetWorthEntryForm({ entry, onSuccess }) {
       </div>
 
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--accent-green)' }}>
-          Assets
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--accent-green)' }}>
+            Assets
+          </div>
+          <button
+            type="button"
+            onClick={() => setAssets(initAssets())}
+            className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded transition-opacity hover:opacity-80"
+            style={{ color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)' }}
+          >
+            <RefreshCw size={10} />
+            Sync Portfolio
+          </button>
         </div>
         <div className="space-y-2">
-          {ASSET_ACCOUNTS.map(account => (
+          {ASSET_ACCOUNTS.map(account => {
+            const isLive = !isEdit && !!PORTFOLIO_ACCOUNT_MAP[account]
+            return (
             <div key={account} className="flex items-center gap-3">
-              <label className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>{account}</label>
+              <label className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                {account}
+                {isLive && <span className="ml-1.5 text-[9px] px-1 py-px rounded" style={{ backgroundColor: 'rgba(0,170,255,0.12)', color: 'var(--accent-blue)' }}>LIVE</span>}
+              </label>
               <div className="relative w-32">
                 <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--text-dim)' }}>$</span>
                 <input
@@ -140,11 +188,12 @@ export function NetWorthEntryForm({ entry, onSuccess }) {
                   step="0.01"
                   min="0"
                   className="w-full text-right text-sm pl-5 pr-2 py-1.5 rounded border outline-none"
-                  style={fieldStyle}
+                  style={isLive ? { ...fieldStyle, borderColor: 'rgba(0,170,255,0.35)' } : fieldStyle}
                 />
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
