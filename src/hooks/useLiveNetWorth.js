@@ -2,14 +2,15 @@ import { useData } from '../context/DataContext'
 
 const INVESTMENT_ACCOUNTS = ['Blueprint', 'Roth IRA', 'Trading']
 
-// Strip any snapshot key that matches these terms (case-insensitive substring)
-// — live portfolio data replaces all of these
-const STRIP_TERMS = ['blueprint', 'robinhood', 'roth', 'trading', 'crypto', 'coinbase', 'hyperliquid']
-
-function isInvestmentKey(key) {
-  const lower = key.toLowerCase()
-  return STRIP_TERMS.some(t => lower.includes(t))
-}
+// Exact snapshot keys replaced by live portfolio data — do NOT include manual
+// cash accounts like 'Robinhood Banking' even though they share a word
+const INVESTMENT_SNAPSHOT_KEYS = new Set([
+  'Blueprint', 'Blueprint (Robinhood)', 'Robinhood',
+  'Roth IRA', 'Roth',
+  'Trading', 'Trading Account',
+  'Crypto', 'Crypto (Coinbase)', 'Coinbase',
+  'Hyperliquid',
+])
 
 export function useLiveNetWorth() {
   const { latestNetWorth, portfolio, accountCash, marketPrices } = useData()
@@ -17,7 +18,7 @@ export function useLiveNetWorth() {
   // Strip investment account keys from snapshot — live data replaces them
   const accounts = {}
   for (const [key, val] of Object.entries(latestNetWorth?.accounts ?? {})) {
-    if (!isInvestmentKey(key) && val > 0) {
+    if (!INVESTMENT_SNAPSHOT_KEYS.has(key) && val > 0) {
       accounts[key] = val
     }
   }
