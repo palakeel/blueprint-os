@@ -21,7 +21,10 @@ export function Portfolio() {
   const [priceStatus,   setPriceStatus]  = useState('idle')
   const [panel,         setPanel]        = useState(null)
   const [editingPos,    setEditingPos]   = useState(null)
-  const [activeAccount, setActiveAccount] = useState(ACCOUNTS[0])
+  const [activeAccount,  setActiveAccount]  = useState(ACCOUNTS[0])
+  const [editingCash,    setEditingCash]    = useState(false)
+  const [cashInput,      setCashInput]      = useState('')
+  const [savingCash,     setSavingCash]     = useState(false)
   // All positions with shares (used for price fetching — pull from all accounts)
   const allActive = portfolio.filter(p => p.shares > 0)
   // Positions scoped to the selected account tab
@@ -47,6 +50,21 @@ export function Portfolio() {
   }
 
   useEffect(() => { fetchPrices() }, [allActive.length])
+
+  const saveCash = async () => {
+    if (!user) return
+    const balance = parseFloat(cashInput)
+    if (isNaN(balance)) return
+    setSavingCash(true)
+    const dca_frequency = accountCash[activeAccount]?.dca_frequency ?? 'biweekly'
+    await supabase.from('account_cash').upsert(
+      { user_id: user.id, account: activeAccount, balance, dca_frequency, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,account' }
+    )
+    setAccountCash(prev => ({ ...prev, [activeAccount]: { balance, dca_frequency } }))
+    setEditingCash(false)
+    setSavingCash(false)
+  }
 
   const deletePosition = async (pos) => {
     if (!confirm(`Remove ${pos.ticker} from portfolio?`)) return
@@ -267,8 +285,8 @@ export function Portfolio() {
                     </tr>
                   )
                 })}
-                {/* Cash row */}
-                {cashBalance > 0 && (
+                {/* Cash row — always show so it's editable even at $0 */}
+                {activeAccount !== 'Crypto' && (
                   <tr className="border-t text-sm" style={{ borderColor: 'var(--border)' }}>
                     <td className="px-4 py-3 font-bold" style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
                       CASH
@@ -277,11 +295,33 @@ export function Portfolio() {
                     <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>—</td>
                     {priceStatus === 'connected' && <td className="px-4 py-3" />}
                     <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                      <Private>{formatMoney(cashBalance)}</Private>
+                      {editingCash ? (
+                        <span className="flex items-center justify-end gap-1">
+                          <input
+                            autoFocus
+                            type="number" step="0.01" min="0"
+                            value={cashInput}
+                            onChange={e => setCashInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') saveCash(); if (e.key === 'Escape') setEditingCash(false) }}
+                            onBlur={saveCash}
+                            className="w-24 text-sm px-1.5 py-0.5 rounded border outline-none tabular-nums text-right"
+                            style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--accent-cyan)', color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}
+                          />
+                          {savingCash && <span className="text-xs" style={{ color: 'var(--text-dim)' }}>…</span>}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { setCashInput(cashBalance > 0 ? String(cashBalance) : ''); setEditingCash(true) }}
+                          className="hover:opacity-70 transition-opacity"
+                          title="Click to edit cash balance">
+                          <Private>{cashBalance > 0 ? `$${cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : <span style={{ color: 'var(--text-dim)' }}>+ Add cash</span>}</Private>
+                        </button>
+                      )}
                     </td>
                     {priceStatus === 'connected' && <td className="px-4 py-3 text-right" style={{ color: 'var(--text-dim)' }}>—</td>}
                     <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>
-                      {(totalMarketValue > 0 ? (cashBalance / totalMarketValue) * 100 : 0).toFixed(1)}%
+                      {cashBalance > 0 ? `${(totalMarketValue > 0 ? (cashBalance / totalMarketValue) * 100 : 0).toFixed(1)}%` : '—'}
                     </td>
                     <td className="px-4 py-3 text-right" style={{ color: 'var(--text-dim)' }}>—</td>
                     <td className="px-4 py-3 text-right" style={{ color: 'var(--text-dim)' }}>—</td>
@@ -351,6 +391,7 @@ export function Portfolio() {
                 const active = (accountCash[activeAccount]?.dca_frequency ?? 'biweekly').toLowerCase() === f.toLowerCase()
                 return (
                   <button
+                    type="button"
                     key={f}
                     onClick={async () => {
                       if (!user) return
