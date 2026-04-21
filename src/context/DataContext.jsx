@@ -47,7 +47,7 @@ export function DataProvider({ children }) {
       if (msRes.data)    setMilestones(msRes.data)
       if (recRes.data)   setReceivables(recRes.data)
       if (portRes.data)  setPortfolio(portRes.data)
-      if (cashRes.data)  setAccountCash(Object.fromEntries(cashRes.data.map(r => [r.account, r.balance])))
+      if (cashRes.data)  setAccountCash(Object.fromEntries(cashRes.data.map(r => [r.account, { balance: r.balance, dca_frequency: r.dca_frequency ?? 'biweekly' }])))
       if (gamRes.data)   setGamification(gamRes.data)
       setLastUpdated(new Date())
     } finally {

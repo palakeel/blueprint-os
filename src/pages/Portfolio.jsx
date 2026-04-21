@@ -7,44 +7,26 @@ import { EditPositionForm }    from '../components/forms/EditPositionForm'
 import { supabase }            from '../lib/supabase'
 import { formatMoney }         from '../lib/formatters'
 import { Private }             from '../components/ui/Private'
-import { CheckCircle, Clock, RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, Bitcoin, DollarSign } from 'lucide-react'
+import { RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, Bitcoin, DollarSign } from 'lucide-react'
 
-function getDCAPeriod() {
-  const now    = new Date()
-  const origin = new Date('2026-01-05')
-  const days   = Math.floor((now - origin) / 86400000)
-  const period = Math.floor(days / 14)
-  const start  = new Date(origin)
-  start.setDate(start.getDate() + period * 14)
-  const end = new Date(start)
-  end.setDate(end.getDate() + 13)
-  return {
-    key:   start.toISOString().split('T')[0],
-    label: `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-  }
-}
+const DCA_FREQUENCIES = ['Weekly', 'Biweekly', 'Monthly', 'Quarterly']
 
 export function Portfolio() {
-  const { portfolio, setPortfolio, accountCash, setAccountCash, gamification, setGamification } = useData()
+  const { portfolio, setPortfolio, accountCash, setAccountCash } = useData()
   const { user } = useAuth()
-  const [dcaConfirmed, setDcaConfirmed] = useState(false)
-  const [confirming,   setConfirming]   = useState(false)
-  const [prices,       setPrices]       = useState({})
-  const [priceStatus,  setPriceStatus]  = useState('idle')
-  const [panel,        setPanel]        = useState(null)
-  const [editingPos,   setEditingPos]   = useState(null)
+  const [prices,        setPrices]       = useState({})
+  const [priceStatus,   setPriceStatus]  = useState('idle')
+  const [panel,         setPanel]        = useState(null)
+  const [editingPos,    setEditingPos]   = useState(null)
   const [activeAccount, setActiveAccount] = useState(ACCOUNTS[0])
-  const [editingCash,  setEditingCash]  = useState(false)
-  const [cashInput,    setCashInput]    = useState('')
-  const [savingCash,   setSavingCash]   = useState(false)
-
-  const period    = getDCAPeriod()
+  const [editingCash,   setEditingCash]  = useState(false)
+  const [cashInput,     setCashInput]    = useState('')
+  const [savingCash,    setSavingCash]   = useState(false)
   // All positions with shares (used for price fetching — pull from all accounts)
   const allActive = portfolio.filter(p => p.shares > 0)
   // Positions scoped to the selected account tab
   const activePos = allActive.filter(p => (p.account ?? 'Blueprint') === activeAccount)
   const totalCost        = activePos.reduce((s, p) => s + p.shares * p.avg_cost, 0)
-  const totalDCA         = portfolio.filter(p => (p.account ?? 'Blueprint') === 'Blueprint').reduce((s, p) => s + (p.dca_biweekly ?? 0), 0)
   const totalMarketValue = activePos.reduce((s, p) => {
     const lp = prices[p.ticker]?.price
     return s + p.shares * (lp > 0 ? lp : p.avg_cost)
@@ -65,35 +47,17 @@ export function Portfolio() {
 
   useEffect(() => { fetchPrices() }, [allActive.length])
 
-  useEffect(() => {
+  const saveCash = async (freq) => {
     if (!user) return
-    supabase.from('dca_confirmations').select('id').eq('user_id', user.id).eq('period_start', period.key)
-      .maybeSingle().then(({ data }) => setDcaConfirmed(!!data))
-  }, [user, period.key])
-
-  const confirmDCA = async () => {
-    if (!user || dcaConfirmed) return
-    setConfirming(true)
-    await supabase.from('dca_confirmations').insert({ user_id: user.id, period_start: period.key, all_fired: true })
-    if (gamification) {
-      const updated = { ...gamification, weekly_scores: { ...(gamification.weekly_scores ?? {}), dcaConfirmed: true } }
-      await supabase.from('gamification').update({ weekly_scores: updated.weekly_scores }).eq('user_id', user.id)
-      setGamification(updated)
-    }
-    setDcaConfirmed(true)
-    setConfirming(false)
-  }
-
-  const saveCash = async () => {
-    if (!user) return
-    const balance = parseFloat(cashInput) || 0
+    const balance = freq != null ? (accountCash[activeAccount]?.balance ?? 0) : (parseFloat(cashInput) || 0)
+    const dca_frequency = freq ?? (accountCash[activeAccount]?.dca_frequency ?? 'biweekly')
     setSavingCash(true)
     await supabase.from('account_cash').upsert(
-      { user_id: user.id, account: activeAccount, balance, updated_at: new Date().toISOString() },
+      { user_id: user.id, account: activeAccount, balance, dca_frequency, updated_at: new Date().toISOString() },
       { onConflict: 'user_id,account' }
     )
-    setAccountCash(prev => ({ ...prev, [activeAccount]: balance }))
-    setEditingCash(false)
+    setAccountCash(prev => ({ ...prev, [activeAccount]: { balance, dca_frequency } }))
+    if (freq == null) setEditingCash(false)
     setSavingCash(false)
   }
 
@@ -179,10 +143,10 @@ export function Portfolio() {
                   </span>
                 ) : (
                   <button
-                    onClick={() => { setCashInput(String(accountCash[activeAccount] ?? '')); setEditingCash(true) }}
+                    onClick={() => { setCashInput(String(accountCash[activeAccount]?.balance ?? '')); setEditingCash(true) }}
                     className="tabular-nums text-sm hover:opacity-70 transition-opacity"
                     style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                    <Private>{accountCash[activeAccount] > 0 ? formatMoney(accountCash[activeAccount]) : 'Add cash'}</Private>
+                    <Private>{(accountCash[activeAccount]?.balance ?? 0) > 0 ? formatMoney(accountCash[activeAccount].balance) : 'Add cash'}</Private>
                     <span className="text-xs ml-1" style={{ color: 'var(--text-dim)' }}>cash</span>
                   </button>
                 )}
@@ -365,14 +329,15 @@ export function Portfolio() {
       {/* DCA Tracker + Allocation Chart */}
       {activeAccount !== 'Crypto' && <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="rounded-lg border p-5" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>DCA Tracker</h2>
-            <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
-              <Clock size={11} /> {period.label}
-            </span>
-          </div>
+          <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>DCA Plan</h2>
+          {/* Per-position allocations */}
           <div className="space-y-2 mb-4">
-            {portfolio.filter(p => (p.account ?? 'Blueprint') === 'Blueprint' && p.dca_biweekly).map(pos => (
+            {activePos.filter(p => p.dca_biweekly).length === 0 && (
+              <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                No DCA set — edit a position to add an allocation.
+              </p>
+            )}
+            {activePos.filter(p => p.dca_biweekly).map(pos => (
               <div key={pos.id} className="flex justify-between items-center text-xs">
                 <span style={{ color: 'var(--accent-cyan)', fontFamily: "'JetBrains Mono', monospace" }}>{pos.ticker}</span>
                 <span className="tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
@@ -380,24 +345,37 @@ export function Portfolio() {
                 </span>
               </div>
             ))}
-            <div className="border-t pt-2 flex justify-between text-sm font-semibold" style={{ borderColor: 'var(--border)' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Total</span>
-              <span className="tabular-nums" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
-                ${totalDCA}/period
-              </span>
+            {activePos.some(p => p.dca_biweekly) && (
+              <div className="border-t pt-2 flex justify-between text-sm font-semibold" style={{ borderColor: 'var(--border)' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Total</span>
+                <span className="tabular-nums" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
+                  ${activePos.reduce((s, p) => s + (p.dca_biweekly ?? 0), 0)}/period
+                </span>
+              </div>
+            )}
+          </div>
+          {/* Frequency selector */}
+          <div>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-dim)' }}>Frequency</p>
+            <div className="flex flex-wrap gap-1.5">
+              {DCA_FREQUENCIES.map(f => {
+                const active = (accountCash[activeAccount]?.dca_frequency ?? 'biweekly').toLowerCase() === f.toLowerCase()
+                return (
+                  <button
+                    key={f}
+                    onClick={() => saveCash(f.toLowerCase())}
+                    className="px-2.5 py-1 rounded text-xs font-medium transition-opacity hover:opacity-80"
+                    style={{
+                      backgroundColor: active ? 'var(--accent-amber)' : 'var(--bg-tertiary)',
+                      color:           active ? '#0a0e1a' : 'var(--text-secondary)',
+                      border:          active ? 'none' : '1px solid var(--border)',
+                    }}>
+                    {f}
+                  </button>
+                )
+              })}
             </div>
           </div>
-          <button onClick={confirmDCA} disabled={dcaConfirmed || confirming || !user}
-            className="w-full py-2 rounded text-sm font-medium flex items-center justify-center gap-2 transition-opacity"
-            style={{
-              backgroundColor: dcaConfirmed ? 'var(--bg-tertiary)' : 'var(--accent-green)',
-              color:           dcaConfirmed ? 'var(--accent-green)' : '#0a0e1a',
-              opacity:         (confirming || !user) ? 0.6 : 1,
-              border:          dcaConfirmed ? '1px solid var(--accent-green)' : 'none',
-            }}>
-            {dcaConfirmed ? <><CheckCircle size={14} /> DCA Confirmed</> : confirming ? 'Confirming...' : 'Confirm Period DCA Fired'}
-          </button>
-          {!user && <p className="text-xs text-center mt-2" style={{ color: 'var(--text-dim)' }}>Sign in to track DCA</p>}
         </div>
 
         <div className="md:col-span-2 rounded-lg border p-5" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>

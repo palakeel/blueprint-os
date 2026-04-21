@@ -16,7 +16,7 @@ export function AssetBreakdown() {
     const posVal = portfolio
       .filter(p => (p.account ?? 'Blueprint') === portAcct && p.shares > 0)
       .reduce((s, p) => s + p.shares * p.avg_cost, 0)
-    const cash = accountCash[portAcct] ?? 0
+    const cash = accountCash[portAcct]?.balance ?? 0
     const total = posVal + cash
     if (total > 0) raw[snapshotKey] = total
   }
