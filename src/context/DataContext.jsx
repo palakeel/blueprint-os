@@ -35,6 +35,7 @@ export function DataProvider({ children }) {
   const [receivables,     setReceivables]     = useState([])
   const [portfolio,       setPortfolio]       = useState([])
   const [accountCash,     setAccountCash]     = useState({})  // { Blueprint: 0, 'Roth IRA': 0, Trading: 0 }
+  const [expenses,        setExpenses]        = useState([])
   const [gamification,    setGamification]    = useState(null)
   const [marketPrices,    setMarketPrices]    = useState({}) // { TICKER: price }
   const [loading,         setLoading]         = useState(false)
@@ -45,7 +46,7 @@ export function DataProvider({ children }) {
     if (!user) return
     setLoading(true)
     try {
-      const [nwRes, budgetRes, msRes, recRes, portRes, cashRes, gamRes] = await Promise.all([
+      const [nwRes, budgetRes, msRes, recRes, portRes, cashRes, gamRes, expRes] = await Promise.all([
         supabase.from('net_worth_entries').select('*').eq('user_id', user.id).order('entry_date', { ascending: false }),
         supabase.from('budget_entries').select('*').eq('user_id', user.id).order('week_start', { ascending: false }),
         supabase.from('milestones').select('*').eq('user_id', user.id).order('target_amount'),
@@ -53,6 +54,7 @@ export function DataProvider({ children }) {
         supabase.from('portfolio_positions').select('*').eq('user_id', user.id).order('ticker'),
         supabase.from('account_cash').select('*').eq('user_id', user.id),
         supabase.from('gamification').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('expenses').select('*').eq('user_id', user.id).order('date', { ascending: false }),
       ])
       if (nwRes.data)    setNetWorthHistory(nwRes.data)
       if (budgetRes.data) setBudgetEntries(budgetRes.data)
@@ -61,6 +63,7 @@ export function DataProvider({ children }) {
       if (portRes.data)  setPortfolio(portRes.data)
       if (cashRes.data)  setAccountCash(Object.fromEntries(cashRes.data.map(r => [r.account, { balance: r.balance, dca_frequency: r.dca_frequency ?? 'biweekly' }])))
       if (gamRes.data)   setGamification(gamRes.data)
+      if (expRes.data)   setExpenses(expRes.data)
       setLastUpdated(new Date())
     } finally {
       setLoading(false)
@@ -124,6 +127,7 @@ export function DataProvider({ children }) {
     <DataContext.Provider value={{
       netWorthHistory, setNetWorthHistory,
       budgetEntries,   setBudgetEntries,
+      expenses,        setExpenses,
       milestones,      setMilestones,
       receivables,     setReceivables,
       portfolio,       setPortfolio,
