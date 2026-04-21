@@ -26,6 +26,7 @@ export function DataProvider({ children }) {
   const [portfolio,       setPortfolio]       = useState([])
   const [accountCash,     setAccountCash]     = useState({})  // { Blueprint: 0, 'Roth IRA': 0, Trading: 0 }
   const [gamification,    setGamification]    = useState(null)
+  const [marketPrices,    setMarketPrices]    = useState({}) // { TICKER: price }
   const [loading,         setLoading]         = useState(false)
   const [lastUpdated,     setLastUpdated]     = useState(new Date())
 
@@ -57,6 +58,33 @@ export function DataProvider({ children }) {
 
   useEffect(() => { if (user) fetchAll() }, [user, fetchAll])
 
+  // Fetch live crypto prices whenever portfolio changes
+  useEffect(() => {
+    const CRYPTO_IDS = {
+      BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
+      XRP: 'ripple', ADA: 'cardano', AVAX: 'avalanche-2', DOT: 'polkadot',
+      DOGE: 'dogecoin', LINK: 'chainlink', MATIC: 'matic-network', UNI: 'uniswap',
+      ATOM: 'cosmos', LTC: 'litecoin', BCH: 'bitcoin-cash', NEAR: 'near',
+      APT: 'aptos', ARB: 'arbitrum', OP: 'optimism', SUI: 'sui',
+      TON: 'the-open-network', PEPE: 'pepe', SHIB: 'shiba-inu',
+    }
+    const cryptoPos = portfolio.filter(p => p.account === 'Crypto' && p.shares > 0)
+    if (cryptoPos.length === 0) return
+    const ids = cryptoPos.map(p => CRYPTO_IDS[p.ticker.toUpperCase()] ?? p.ticker.toLowerCase()).join(',')
+    fetch(`/api/coingecko/prices?ids=${encodeURIComponent(ids)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return
+        const prices = {}
+        for (const pos of cryptoPos) {
+          const id = CRYPTO_IDS[pos.ticker.toUpperCase()] ?? pos.ticker.toLowerCase()
+          if (data[id]?.usd) prices[pos.ticker.toUpperCase()] = data[id].usd
+        }
+        setMarketPrices(prev => ({ ...prev, ...prices }))
+      })
+      .catch(() => {})
+  }, [portfolio])
+
   return (
     <DataContext.Provider value={{
       netWorthHistory, setNetWorthHistory,
@@ -66,6 +94,7 @@ export function DataProvider({ children }) {
       portfolio,       setPortfolio,
       accountCash,     setAccountCash,
       gamification,    setGamification,
+      marketPrices,    setMarketPrices,
       budgetTargets: BUDGET_TARGETS,
       latestNetWorth: netWorthHistory[0] ?? null,
       prevNetWorth:   netWorthHistory[1] ?? null,

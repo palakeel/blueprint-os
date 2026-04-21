@@ -25,7 +25,7 @@ const CRYPTO_IDS = {
 }
 
 export function Portfolio() {
-  const { portfolio, setPortfolio, accountCash, setAccountCash } = useData()
+  const { portfolio, setPortfolio, accountCash, setAccountCash, setMarketPrices } = useData()
   const { user } = useAuth()
   const [prices,        setPrices]       = useState({})
   const [priceStatus,   setPriceStatus]  = useState('idle')
@@ -91,6 +91,14 @@ export function Portfolio() {
 
     if (Object.keys(merged).length > 0) {
       setPrices(merged)
+      // Publish to context so dashboard (AssetBreakdown, NetWorthTicker) can use live prices
+      setMarketPrices(prev => {
+        const next = { ...prev }
+        for (const [ticker, data] of Object.entries(merged)) {
+          if (data?.price) next[ticker.toUpperCase()] = data.price
+        }
+        return next
+      })
       setPriceStatus('connected')
     } else if (allActive.length > 0) {
       setPriceStatus(stockPositions.length > 0 ? 'not_connected' : 'error')
