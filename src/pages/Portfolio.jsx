@@ -106,6 +106,12 @@ export function Portfolio() {
                 <Private>{totalMarketValue - totalCost >= 0 ? '+' : ''}{formatMoney(totalMarketValue - totalCost)} P&L</Private>
               </span>
             )}
+            {cashBalance > 0 && (
+              <span className="tabular-nums text-sm" style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                <Private>{formatMoney(cashBalance)}</Private>
+                <span className="text-xs ml-1" style={{ color: 'var(--text-dim)' }}>cash</span>
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -261,6 +267,27 @@ export function Portfolio() {
                     </tr>
                   )
                 })}
+                {/* Cash row */}
+                {cashBalance > 0 && (
+                  <tr className="border-t text-sm" style={{ borderColor: 'var(--border)' }}>
+                    <td className="px-4 py-3 font-bold" style={{ color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      CASH
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>—</td>
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>—</td>
+                    {priceStatus === 'connected' && <td className="px-4 py-3" />}
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      <Private>{formatMoney(cashBalance)}</Private>
+                    </td>
+                    {priceStatus === 'connected' && <td className="px-4 py-3 text-right" style={{ color: 'var(--text-dim)' }}>—</td>}
+                    <td className="px-4 py-3 text-right tabular-nums" style={{ color: 'var(--text-dim)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {(totalMarketValue > 0 ? (cashBalance / totalMarketValue) * 100 : 0).toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-3 text-right" style={{ color: 'var(--text-dim)' }}>—</td>
+                    <td className="px-4 py-3 text-right" style={{ color: 'var(--text-dim)' }}>—</td>
+                    <td className="px-4 py-3" />
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
