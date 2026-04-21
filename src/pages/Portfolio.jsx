@@ -11,6 +11,9 @@ import { RefreshCw, Wifi, WifiOff, Pencil, Trash2, Plus, Bitcoin, DollarSign } f
 
 const DCA_FREQUENCIES = ['Weekly', 'Biweekly', 'Monthly', 'Quarterly']
 
+// Multiplier relative to biweekly base (26 periods/year)
+const DCA_MULTIPLIER = { weekly: 0.5, biweekly: 1, monthly: 26 / 12, quarterly: 26 / 4 }
+
 export function Portfolio() {
   const { portfolio, setPortfolio, accountCash, setAccountCash } = useData()
   const { user } = useAuth()
@@ -331,29 +334,37 @@ export function Portfolio() {
         <div className="rounded-lg border p-5" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>DCA Plan</h2>
           {/* Per-position allocations */}
-          <div className="space-y-2 mb-4">
-            {activePos.filter(p => p.dca_biweekly).length === 0 && (
-              <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                No DCA set — edit a position to add an allocation.
-              </p>
-            )}
-            {activePos.filter(p => p.dca_biweekly).map(pos => (
-              <div key={pos.id} className="flex justify-between items-center text-xs">
-                <span style={{ color: 'var(--accent-cyan)', fontFamily: "'JetBrains Mono', monospace" }}>{pos.ticker}</span>
-                <span className="tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  ${pos.dca_biweekly}
-                </span>
+          {(() => {
+            const freq = (accountCash[activeAccount]?.dca_frequency ?? 'biweekly').toLowerCase()
+            const mult = DCA_MULTIPLIER[freq] ?? 1
+            const dcaPositions = activePos.filter(p => p.dca_biweekly)
+            const total = dcaPositions.reduce((s, p) => s + (p.dca_biweekly ?? 0), 0) * mult
+            return (
+              <div className="space-y-2 mb-4">
+                {dcaPositions.length === 0 && (
+                  <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                    No DCA set — edit a position to add an allocation.
+                  </p>
+                )}
+                {dcaPositions.map(pos => (
+                  <div key={pos.id} className="flex justify-between items-center text-xs">
+                    <span style={{ color: 'var(--accent-cyan)', fontFamily: "'JetBrains Mono', monospace" }}>{pos.ticker}</span>
+                    <span className="tabular-nums" style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {formatMoney(pos.dca_biweekly * mult)}
+                    </span>
+                  </div>
+                ))}
+                {dcaPositions.length > 0 && (
+                  <div className="border-t pt-2 flex justify-between text-sm font-semibold" style={{ borderColor: 'var(--border)' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Total</span>
+                    <span className="tabular-nums" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {formatMoney(total)}/period
+                    </span>
+                  </div>
+                )}
               </div>
-            ))}
-            {activePos.some(p => p.dca_biweekly) && (
-              <div className="border-t pt-2 flex justify-between text-sm font-semibold" style={{ borderColor: 'var(--border)' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Total</span>
-                <span className="tabular-nums" style={{ color: 'var(--accent-green)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  ${activePos.reduce((s, p) => s + (p.dca_biweekly ?? 0), 0)}/period
-                </span>
-              </div>
-            )}
-          </div>
+            )
+          })()}
           {/* Frequency selector */}
           <div>
             <p className="text-xs mb-2" style={{ color: 'var(--text-dim)' }}>Frequency</p>
