@@ -49,30 +49,34 @@ export function EditPositionForm({ position, defaultAccount, onSuccess }) {
       updated_at:        new Date().toISOString(),
     }
 
+    const hasTicker = payload.ticker.length > 0
+
     try {
-      if (user) {
-        if (isNew) {
-          const { data, error: err } = await supabase
-            .from('portfolio_positions')
-            .insert({ ...payload, user_id: user.id })
-            .select().single()
-          if (err) throw err
-          setPortfolio(prev => [...prev, data])
+      if (hasTicker) {
+        if (user) {
+          if (isNew) {
+            const { data, error: err } = await supabase
+              .from('portfolio_positions')
+              .insert({ ...payload, user_id: user.id })
+              .select().single()
+            if (err) throw err
+            setPortfolio(prev => [...prev, data])
+          } else {
+            const { data, error: err } = await supabase
+              .from('portfolio_positions')
+              .update(payload)
+              .eq('user_id', user.id)
+              .eq('id', position.id)
+              .select().single()
+            if (err) throw err
+            setPortfolio(prev => prev.map(p => p.id === position.id ? data : p))
+          }
         } else {
-          const { data, error: err } = await supabase
-            .from('portfolio_positions')
-            .update(payload)
-            .eq('user_id', user.id)
-            .eq('id', position.id)
-            .select().single()
-          if (err) throw err
-          setPortfolio(prev => prev.map(p => p.id === position.id ? data : p))
-        }
-      } else {
-        if (isNew) {
-          setPortfolio(prev => [...prev, { ...payload, id: `local-${Date.now()}` }])
-        } else {
-          setPortfolio(prev => prev.map(p => p.id === position.id ? { ...p, ...payload } : p))
+          if (isNew) {
+            setPortfolio(prev => [...prev, { ...payload, id: `local-${Date.now()}` }])
+          } else {
+            setPortfolio(prev => prev.map(p => p.id === position.id ? { ...p, ...payload } : p))
+          }
         }
       }
       // Save cash balance if user entered a value
@@ -102,7 +106,7 @@ export function EditPositionForm({ position, defaultAccount, onSuccess }) {
           <div>
             <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Ticker</label>
             <input value={ticker} onChange={e => setTicker(e.target.value.toUpperCase())}
-              placeholder="e.g. AAPL" required
+              placeholder="e.g. AAPL"
               className="w-full text-sm px-2 py-1.5 rounded border outline-none"
               style={fieldStyle} />
           </div>
@@ -178,7 +182,7 @@ export function EditPositionForm({ position, defaultAccount, onSuccess }) {
       <button type="submit" disabled={saving}
         className="w-full py-2.5 rounded font-semibold text-sm transition-opacity"
         style={{ backgroundColor: 'var(--accent-blue)', color: 'white', opacity: saving ? 0.7 : 1 }}>
-        {saving ? 'Saving...' : isNew ? 'Add Position' : 'Update Position'}
+        {saving ? 'Saving...' : !isNew ? 'Update Position' : ticker.trim() ? 'Add Position' : 'Save Cash'}
       </button>
     </form>
   )
