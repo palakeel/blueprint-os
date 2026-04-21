@@ -16,7 +16,6 @@ const ASSET_ACCOUNTS = [
   'CEFCU Checking',
   'CEFCU Savings',
   'Crypto (Coinbase)',
-  'Hyperliquid',
 ]
 
 const LIABILITY_ACCOUNTS = ['AMEX', 'Robinhood Gold', 'Coinbase One Card']
