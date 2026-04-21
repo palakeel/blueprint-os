@@ -191,6 +191,17 @@ export function Portfolio() {
           style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
           <div className="px-5 py-3 border-b text-xs font-semibold uppercase tracking-wider"
             style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Holdings</div>
+          {activePos.length === 0 && !panel && !editingPos && (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <p className="text-sm" style={{ color: 'var(--text-dim)' }}>No positions in {activeAccount}</p>
+              <button
+                onClick={() => { setPanel('add'); setEditingPos(null) }}
+                className="text-xs px-3 py-1.5 rounded border transition-opacity hover:opacity-70"
+                style={{ color: 'var(--accent-green)', borderColor: 'var(--accent-green)' }}>
+                + Add Position
+              </button>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
